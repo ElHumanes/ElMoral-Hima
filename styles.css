@@ -1,0 +1,899 @@
+:root {
+  /* Colores del Club de Pádel El Moral */
+  --color-primary: #0090DF;
+  --color-primary-dark: #0C71C3;
+  --color-accent: #F2EB21;
+  --color-bg: #F4F6F8;
+  --color-surface: #FFFFFF;
+  --color-text: #17202A;
+  --color-text-muted: #66707A;
+  --color-border: #E2E6EA;
+  --color-danger: #DC2626;
+  --color-danger-bg: #FEF2F2;
+  --color-success: #16A34A;
+  --radius: 16px;
+  --sombra: 0 2px 10px rgba(20, 40, 60, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  background: var(--color-bg);
+  color: var(--color-text);
+  line-height: 1.4;
+}
+
+.cabecera {
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  padding: 12px 20px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.cabecera-contenido {
+  max-width: 480px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cabecera-izquierda {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.logo-club {
+  height: 40px;
+  width: auto;
+  display: block;
+  flex-shrink: 0;
+}
+
+.subtitulo-app {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  border-left: 1px solid var(--color-border);
+  padding-left: 12px;
+  line-height: 1.3;
+}
+
+.cabecera-derecha {
+  display: block;
+  flex-shrink: 0;
+  opacity: 0.92;
+  transition: opacity 0.15s ease;
+}
+
+.cabecera-derecha:hover {
+  opacity: 1;
+}
+
+.logo-torneo {
+  height: 30px;
+  width: auto;
+  display: block;
+}
+
+.contenedor {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 20px 16px 40px;
+}
+
+.oculto {
+  display: none;
+}
+
+.tarjeta {
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  box-shadow: var(--sombra);
+  padding: 24px 20px;
+  margin-top: 12px;
+}
+
+.tarjeta-login {
+  margin-top: 40px;
+}
+
+.titulo-login {
+  margin: 0 0 4px;
+  font-size: 22px;
+}
+
+.subtitulo-login {
+  margin: 0 0 24px;
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+
+.etiqueta {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  margin: 16px 0 6px;
+}
+
+.entrada {
+  width: 100%;
+  padding: 14px 16px;
+  border: 1.5px solid var(--color-border);
+  border-radius: 12px;
+  font-size: 16px;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.entrada:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  background: var(--color-surface);
+}
+
+.boton {
+  width: 100%;
+  padding: 15px 16px;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 20px;
+  transition: opacity 0.15s ease, transform 0.05s ease;
+}
+
+.boton:active {
+  transform: scale(0.98);
+}
+
+.boton:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.boton-primario {
+  background: var(--color-primary);
+  color: white;
+}
+
+.boton-primario:hover:not(:disabled) {
+  background: var(--color-primary-dark);
+}
+
+.boton-secundario {
+  background: var(--color-bg);
+  color: var(--color-text);
+  border: 1.5px solid var(--color-border);
+}
+
+.boton-exito {
+  background: var(--color-success);
+  color: white;
+}
+
+.boton-danger {
+  background: var(--color-surface);
+  color: var(--color-danger);
+  border: 1.5px solid rgba(220, 38, 38, 0.35);
+}
+
+.mensaje-error {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 14px;
+  margin-top: 16px;
+}
+
+.mensaje-error.oculto {
+  display: none;
+}
+
+.etiqueta-rol {
+  display: inline-block;
+  background: var(--color-primary);
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  margin: 0 0 12px;
+  text-transform: uppercase;
+}
+
+.titulo-bienvenida {
+  margin: 0 0 8px;
+  font-size: 22px;
+}
+
+.texto-secundario {
+  color: var(--color-text-muted);
+  font-size: 14px;
+  margin: 0 0 8px;
+}
+
+.cargando {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 0;
+  color: var(--color-text-muted);
+  gap: 16px;
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: girar 0.8s linear infinite;
+}
+
+@keyframes girar {
+  to { transform: rotate(360deg); }
+}
+
+@media (min-width: 600px) {
+  .contenedor {
+    padding-top: 40px;
+  }
+}
+
+.pie-patrocinadores {
+  max-width: 480px;
+  margin: 24px auto 0;
+  padding: 20px 16px 32px;
+  text-align: center;
+}
+
+.pie-titulo {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  margin: 0 0 12px;
+}
+
+.patrocinadores-fila {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.patrocinador-tarjeta {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 60px;
+  box-shadow: var(--sombra);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.patrocinador-tarjeta:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(20, 40, 60, 0.12);
+}
+
+.patrocinador-tarjeta img {
+  max-height: 44px;
+  max-width: 120px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+/* Menú de acciones del capitán (pantalla de inicio) */
+.menu-tarjetas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.menu-tarjetas.oculto {
+  display: none;
+}
+
+.tarjeta-menu {
+  flex: 1;
+  min-width: 100px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  box-shadow: var(--sombra);
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--color-text);
+}
+
+.tarjeta-menu:hover {
+  border-color: var(--color-primary);
+}
+
+.tarjeta-menu-icono {
+  font-size: 26px;
+}
+
+/* Cabecera de sección con botón volver */
+.cabecera-seccion {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.boton-volver {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 8px 0;
+}
+
+.titulo-seccion {
+  margin: 0;
+  font-size: 20px;
+}
+
+/* Lista de jugadores */
+.lista-jugadores {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.jugador-tarjeta {
+  background: var(--color-surface);
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: var(--sombra);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.jugador-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.jugador-nombre {
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.jugador-nombre-real {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin-top: -4px;
+}
+
+.jugador-meta {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.insignia {
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.insignia-posicion {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+}
+
+.insignia-activo {
+  background: rgba(22, 163, 74, 0.12);
+  color: var(--color-success);
+}
+
+.insignia-inactivo {
+  background: rgba(220, 38, 38, 0.1);
+  color: var(--color-danger);
+}
+
+.jugador-acciones {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.boton-mini {
+  padding: 7px 12px;
+  font-size: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  cursor: pointer;
+  font-weight: 700;
+  white-space: nowrap;
+  color: var(--color-text);
+}
+
+.boton-mini-peligro {
+  color: var(--color-danger);
+  border-color: rgba(220, 38, 38, 0.3);
+}
+
+.boton-mini-exito {
+  color: var(--color-success);
+  border-color: rgba(22, 163, 74, 0.3);
+}
+
+.texto-vacio {
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  padding: 32px 0;
+}
+
+/* Modal crear/editar jugador */
+.modal-fondo {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 20, 30, 0.5);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal-fondo.oculto {
+  display: none;
+}
+
+.modal-caja {
+  background: var(--color-surface);
+  border-radius: 20px 20px 0 0;
+  padding: 24px 20px 28px;
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-titulo {
+  margin: 0;
+  font-size: 20px;
+}
+
+.modal-botones {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.modal-botones .boton {
+  margin-top: 0;
+}
+
+select.entrada {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--color-text-muted) 50%), linear-gradient(135deg, var(--color-text-muted) 50%, transparent 50%);
+  background-position: calc(100% - 20px) center, calc(100% - 15px) center;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 36px;
+}
+
+@media (min-width: 600px) {
+  .modal-fondo {
+    align-items: center;
+  }
+
+  .modal-caja {
+    border-radius: 20px;
+  }
+}
+
+/* Jornadas y convocatoria */
+.titulo-subseccion {
+  font-size: 14px;
+  margin: 24px 0 8px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.jornada-tarjeta {
+  background: var(--color-surface);
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: var(--sombra);
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.jornada-tarjeta:hover {
+  box-shadow: 0 4px 14px rgba(20, 40, 60, 0.14);
+}
+
+.jornada-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.jornada-rival {
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.jornada-meta {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.insignia-estado-pendiente {
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+}
+
+.insignia-estado-abierta {
+  background: rgba(22, 163, 74, 0.12);
+  color: var(--color-success);
+}
+
+.insignia-estado-cerrada {
+  background: rgba(217, 119, 6, 0.12);
+  color: #B45309;
+}
+
+.insignia-estado-avanzado {
+  background: rgba(0, 144, 223, 0.12);
+  color: var(--color-primary-dark);
+}
+
+/* Selección de los 10 */
+.jugador-tarjeta.seleccionable {
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: border-color 0.15s ease;
+}
+
+.jugador-tarjeta.seleccionable.marcada {
+  border-color: var(--color-primary);
+}
+
+.marca-seleccion {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: transparent;
+  flex-shrink: 0;
+}
+
+.fila-forma-reciente {
+  display: flex;
+  gap: 6px;
+  margin: 6px 0 12px;
+}
+
+.chip-forma {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: white;
+}
+
+.chip-forma-g {
+  background: var(--color-success);
+}
+
+.chip-forma-p {
+  background: var(--color-danger);
+}
+
+.fila-resumen-dashboard {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.stat-dashboard {
+  background: var(--color-bg);
+  border-radius: 12px;
+  padding: 12px;
+  text-align: center;
+}
+
+.stat-dashboard-valor {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--color-primary-dark);
+  display: block;
+}
+
+.tarjeta-recomendacion {
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  box-shadow: var(--sombra);
+  padding: 20px;
+  margin-top: 16px;
+  border: 2px solid transparent;
+}
+
+.tarjeta-recomendacion.recomendacion-mejor {
+  border-color: var(--color-primary);
+}
+
+.recomendacion-cabecera {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.recomendacion-titulo {
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.recomendacion-indice {
+  background: var(--color-primary);
+  color: white;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+
+.pareja-recomendada {
+  border-top: 1px solid var(--color-border);
+  padding: 10px 0;
+}
+
+.pareja-recomendada:first-child {
+  border-top: none;
+}
+
+.explicacion-pareja {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.explicacion-pareja li {
+  margin-bottom: 2px;
+}
+
+.stat-dashboard-etiqueta {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.marcada .marca-seleccion {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: white;
+}
+
+/* Generador de parejas */
+.insignia-compat-buena {
+  background: rgba(22, 163, 74, 0.12);
+  color: var(--color-success);
+}
+
+.insignia-compat-regular {
+  background: rgba(217, 119, 6, 0.12);
+  color: #B45309;
+}
+
+.insignia-compat-mala {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+.pareja-tarjeta {
+  background: var(--color-surface);
+  border-radius: 14px;
+  padding: 14px 16px;
+  box-shadow: var(--sombra);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pareja-numero {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+}
+
+.pareja-jugadores {
+  font-weight: 700;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.pareja-meta {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+/* Resultados */
+.fila-marcador {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.fila-marcador .entrada {
+  text-align: center;
+}
+
+.separador-marcador {
+  font-weight: 700;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.partido-tarjeta {
+  background: var(--color-surface);
+  border-radius: 14px;
+  padding: 14px 16px;
+  box-shadow: var(--sombra);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.partido-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.partido-numero {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+}
+
+.partido-jugadores {
+  font-weight: 700;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.partido-marcador {
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+/* Avatares de jugador (foto de perfil o inicial de su nombre) */
+.avatar {
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  display: block;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+}
+
+.avatar-inicial {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-primary);
+  color: #fff;
+  font-weight: 700;
+}
+
+.avatar-pequeno {
+  width: 26px;
+  height: 26px;
+  font-size: 11px;
+}
+
+.avatar-mediano {
+  width: 40px;
+  height: 40px;
+  font-size: 15px;
+}
+
+.avatar-grande {
+  width: 88px;
+  height: 88px;
+  font-size: 30px;
+  border-width: 2px;
+}
+
+/* Foto de perfil en "Mi perfil" */
+.tarjeta-perfil-foto {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.boton-foto {
+  display: inline-block;
+  cursor: pointer;
+  margin: 0;
+}

@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Padel App</title>
+  <meta name="theme-color" content="#0090DF">
+  <meta name="description" content="Gestión del equipo de pádel del Club de Pádel El Moral: jugadores, jornadas, convocatorias y estadísticas.">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="assets/icon-192.png">
+  <link rel="apple-touch-icon" href="assets/icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Padel App">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <header class="cabecera">
+    <div class="cabecera-contenido">
+      <div class="cabecera-izquierda">
+        <img src="assets/logo-club.png" alt="Club de Pádel El Moral" class="logo-club">
+        <span class="subtitulo-app">App de gestión de equipo</span>
+      </div>
+      <a class="cabecera-derecha" href="https://seriesnacionalesdepadel.com/" target="_blank" rel="noopener noreferrer" title="Series Nacionales de Pádel">
+        <img src="assets/logo-snp.png" alt="Series Nacionales de Pádel" class="logo-torneo">
+      </a>
+    </div>
+  </header>
+
+  <main class="contenedor">
+
+    <!-- VISTA: CARGANDO -->
+    <section id="vista-cargando" class="vista">
+      <div class="cargando">
+        <div class="spinner"></div>
+        <p>Cargando...</p>
+      </div>
+    </section>
+
+    <!-- VISTA: LOGIN -->
+    <section id="vista-login" class="vista oculto">
+      <div class="tarjeta tarjeta-login">
+        <h1 class="titulo-login">Bienvenido</h1>
+        <p class="subtitulo-login">Entra con tu usuario y tu código de acceso.</p>
+
+        <form id="formulario-login">
+          <label class="etiqueta" for="campo-usuario">Usuario</label>
+          <input class="entrada" type="text" id="campo-usuario" autocomplete="username" required>
+
+          <label class="etiqueta" for="campo-codigo">Código de acceso</label>
+          <input class="entrada" type="password" id="campo-codigo" autocomplete="current-password" inputmode="numeric" required>
+
+          <p id="mensaje-error-login" class="mensaje-error oculto"></p>
+
+          <button type="submit" class="boton boton-primario" id="boton-login">
+            Entrar
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <!-- VISTA: INICIO (tras login) -->
+    <section id="vista-inicio" class="vista oculto">
+      <div class="tarjeta">
+        <p class="etiqueta-rol" id="etiqueta-rol"></p>
+        <h1 class="titulo-bienvenida">Hola, <span id="texto-nombre-usuario"></span> 👋</h1>
+        <p class="texto-secundario">
+          Has iniciado sesión correctamente. Las siguientes fases irán añadiendo aquí
+          las jornadas, convocatorias y estadísticas.
+        </p>
+      </div>
+
+      <div id="menu-capitan" class="menu-tarjetas oculto">
+        <button class="tarjeta-menu" id="boton-ir-jugadores">
+          <span class="tarjeta-menu-icono">👥</span>
+          <span class="tarjeta-menu-texto">Jugadores</span>
+        </button>
+        <button class="tarjeta-menu" id="boton-ir-jornadas">
+          <span class="tarjeta-menu-icono">📅</span>
+          <span class="tarjeta-menu-texto">Jornadas</span>
+        </button>
+        <button class="tarjeta-menu" id="boton-ir-usuarios">
+          <span class="tarjeta-menu-icono">🔑</span>
+          <span class="tarjeta-menu-texto">Usuarios</span>
+        </button>
+        <button class="tarjeta-menu" id="boton-ir-dashboard">
+          <span class="tarjeta-menu-icono">📊</span>
+          <span class="tarjeta-menu-texto">Estadísticas</span>
+        </button>
+      </div>
+
+      <div id="menu-jugador" class="menu-tarjetas oculto">
+        <button class="tarjeta-menu" id="boton-ir-perfil">
+          <span class="tarjeta-menu-icono">🙋</span>
+          <span class="tarjeta-menu-texto">Mi perfil</span>
+        </button>
+        <button class="tarjeta-menu" id="boton-ir-calendario">
+          <span class="tarjeta-menu-icono">📅</span>
+          <span class="tarjeta-menu-texto">Calendario</span>
+        </button>
+      </div>
+
+      <div id="tarjeta-convocatoria-jugador" class="tarjeta oculto">
+        <p class="etiqueta-rol">Convocatoria abierta</p>
+        <h2 id="convocatoria-jugador-titulo" class="titulo-seccion"></h2>
+        <p id="convocatoria-jugador-info" class="texto-secundario"></p>
+        <p id="convocatoria-jugador-respuesta-actual" class="texto-secundario oculto"></p>
+        <div class="modal-botones">
+          <button type="button" class="boton boton-danger" id="boton-no-puedo">No puedo</button>
+          <button type="button" class="boton boton-exito" id="boton-me-apunto">Me apunto</button>
+        </div>
+      </div>
+
+      <button class="boton boton-secundario" id="boton-logout">Cerrar sesión</button>
+    </section>
+
+    <!-- VISTA: JUGADORES (gestión, solo capitán) -->
+    <section id="vista-jugadores" class="vista oculto">
+      <div class="cabecera-seccion">
+        <button class="boton-volver" id="boton-volver-jugadores">← Volver</button>
+        <h1 class="titulo-seccion">Jugadores</h1>
+      </div>
+
+      <button class="boton boton-primario" id="boton-nuevo-jugador">+ Nuevo jugador</button>
+
+      <p id="mensaje-jugadores" class="mensaje-error oculto"></p>
+
+      <div id="lista-jugadores" class="lista-jugadores"></div>
+    </section>
+
+    <!-- VISTA: USUARIOS (gestión, solo capitán) -->
+    <section id="vista-usuarios" class="vista oculto">
+      <div class="cabecera-seccion">
+        <button class="boton-volver" id="boton-volver-usuarios">← Volver</button>
+        <h1 class="titulo-seccion">Usuarios</h1>
+      </div>
+
+      <p class="texto-secundario">
+        Aquí puedes crear accesos para los jugadores y dar poderes de capitán a
+        otra persona (podrá hacer todo lo mismo que tú, incluido registrar resultados).
+      </p>
+
+      <button class="boton boton-primario" id="boton-nuevo-usuario">+ Nuevo usuario</button>
+
+      <p id="mensaje-usuarios" class="mensaje-error oculto"></p>
+
+      <div id="lista-usuarios" class="lista-jugadores"></div>
+    </section>
+
+    <!-- VISTA: DASHBOARD / ESTADÍSTICAS (solo capitán) -->
+    <section id="vista-dashboard" class="vista oculto">
+      <div class="cabecera-seccion">
+        <button class="boton-volver" id="boton-volver-dashboard">← Volver</button>
+        <h1 class="titulo-seccion">Estadísticas</h1>
+      </div>
+
+      <div id="resumen-dashboard" class="tarjeta"></div>
+
+      <h3 class="titulo-seccion titulo-subseccion">🏅 Ranking de jugadores</h3>
+      <div id="lista-ranking-jugadores" class="lista-jugadores"></div>
+
+      <h3 class="titulo-seccion titulo-subseccion">🤝 Ranking de parejas</h3>
+      <div id="lista-ranking-parejas" class="lista-jugadores"></div>
+    </section>
+
+    <!-- VISTA: JORNADAS (gestión, solo capitán) -->
+    <section id="vista-jornadas" class="vista oculto">
+      <div class="cabecera-seccion">
+        <button class="boton-volver" id="boton-volver-jornadas">← Volver</button>
+        <h1 class="titulo-seccion">Jornadas</h1>
+      </div>
+
+      <button class="boton boton-primario" id="boton-nueva-jornada">+ Nueva jornada</button>
+
+      <p id="mensaje-jornadas" class="mensaje-error oculto"></p>
+
+      <div id="lista-jornadas" class="lista-jugadores"></div>
+    </section>
+
+    <!-- VISTA: DETALLE DE JORNADA (gestión, solo capitán) -->
+    <section id="vista-jornada-detalle" class="vista oculto">
+      <div class="cabecera-seccion">
+        <button class="boton-volver" id="boton-volver-jornada-detalle">← Volver</button>
+        <h1 class="titulo-seccion">Jornada</h1>
+      </div>
+
+      <div class="tarjeta">
+        <span id="jornada-detalle-estado" class="insignia insignia-posicion"></span>
+        <h2 id="jornada-detalle-rival" class="titulo-bienvenida"></h2>
+        <p id="jornada-detalle-info" class="texto-secundario"></p>
+        <p id="jornada-detalle-observaciones" class="texto-secundario"></p>
+
+        <div id="jornada-detalle-acciones" class="modal-botones"></div>
+      </div>
+
+      <div id="bloque-convocatoria" class="oculto">
+        <h3 class="titulo-seccion titulo-subseccion">✅ Apuntados (<span id="contador-apuntados">0</span>)</h3>
+        <div id="lista-apuntados" class="lista-jugadores"></div>
+
+        <h3 class="titulo-seccion titulo-subseccion">❌ No disponibles (<span id="contador-no-disponibles">0</span>)</h3>
+        <div id="lista-no-disponibles" class="lista-jugadores"></div>
+
+        <h3 class="titulo-seccion titulo-subseccion">⏳ Pendientes (<span id="contador-pendientes">0</span>)</h3>
+        <div id="lista-pendientes" class="lista-jugadores"></div>
+      </div>
+
+      <div id="bloque-seleccionados" class="oculto">
+        <h3 class="titulo-seccion titulo-subseccion">🏆 Los 10 seleccionados</h3>
+        <div id="lista-seleccionados" class="lista-jugadores"></div>
+      </div>
+
+      <div id="bloque-parejas" class="oculto">
+        <h3 class="titulo-seccion titulo-subseccion">🎾 Parejas</h3>
+        <div id="lista-parejas" class="lista-jugadores"></div>
+
+        <h3 class="titulo-seccion titulo-subseccion">📊 Resultados</h3>
+        <div id="lista-partidos" class="lista-jugadores"></div>
+      </div>
+    </section>
+
+    <!-- VISTA: SELECCIÓN DE LOS 10 (gestión, solo capitán) -->
+    <section id="vista-seleccion" class="vista oculto">
+      <div class="cabecera-seccion">
+        <button class="boton-volver" id="boton-volver-seleccion">← Volver</button>
+        <h1 class="titulo-seccion">Selección de los 10</h1>
+      </div>
+
+      <p class="texto-secundario">Elige exactamente 10 jugadores de entre los que se han apuntado.</p>
+      <p class="etiqueta-rol" id="contador-seleccion">0 / 10</p>
+
+      <p id="mensaje-seleccion" class="mensaje-error oculto"></p>
+
+      <div id="lista-seleccionables" class="lista-jugadores"></div>
+
+      <button class="boton boton-primario" id="boton-confirmar-seleccion" disabled>Confirmar selección</button>
+    </section>
+
+    <!-- VISTA: GENERADOR DE PAREJAS (gestión, solo capitán) -->
+    <section id="vista-parejas" class="vista oculto">
+      <div class="cabecera-seccion">
+        <button class="boton-volver" id="boton-volver-parejas">← Volver</button>
+        <h1 class="titulo-seccion">Generador de parejas</h1>
+      </div>
+
+      <p class="texto-secundario">Toca dos jugadores para formar una pareja. Se ordenarán solas por puntuación al guardar.</p>
+      <p class="etiqueta-rol" id="contador-parejas-formadas">0 / 5 parejas formadas</p>
+
+      <p id="mensaje-parejas" class="mensaje-error oculto"></p>
+
+      <h3 class="titulo-seccion titulo-subseccion">Parejas formadas</h3>
+      <div id="lista-parejas-formadas" class="lista-jugadores"></div>
+
+      <h3 class="titulo-seccion titulo-subseccion">Jugadores disponibles</h3>
+      <div id="lista-disponibles-parejas" class="lista-jugadores"></div>
+
+      <div id="vista-previa-pareja" class="tarjeta oculto"></div>
+
+      <button class="boton boton-primario" id="boton-guardar-parejas" disabled>Guardar parejas</button>
+    </section>
+
+    <!-- VISTA: RECOMENDACIONES (gestión, solo capitán) -->
+    <section id="vista-recomendaciones" class="vista oculto">
+      <div class="cabecera-seccion">
+        <button class="boton-volver" id="boton-volver-recomendaciones">← Volver</button>
+        <h1 class="titulo-seccion">Recomendaciones</h1>
+      </div>
+
+      <p class="texto-secundario">
+        El motor analiza compatibilidad, puntuación, historial juntos, forma reciente y
+        equilibrio de la alineación, y propone las 3 mejores combinaciones.
+      </p>
+
+      <p id="mensaje-recomendaciones" class="mensaje-error oculto"></p>
+
+      <div id="lista-recomendaciones"></div>
+    </section>
+
+    <!-- VISTA: MI PERFIL (jugador) -->
+    <section id="vista-perfil" class="vista oculto">
+      <div class="cabecera-seccion">
+        <button class="boton-volver" id="boton-volver-perfil">← Volver</button>
+        <h1 class="titulo-seccion">Mi perfil</h1>
+      </div>
+
+      <div class="tarjeta tarjeta-perfil-foto">
+        <div id="perfil-avatar-contenedor"></div>
+        <label class="boton boton-secundario boton-foto" for="perfil-foto-input">📷 Cambiar foto</label>
+        <input type="file" id="perfil-foto-input" accept="image/*" capture="user" class="oculto">
+        <p id="mensaje-perfil-foto" class="mensaje-error oculto"></p>
+      </div>
+
+      <div id="tarjeta-perfil" class="tarjeta"></div>
+      <button type="button" class="boton boton-secundario" id="boton-editar-perfil">✏️ Editar mis datos</button>
+
+      <div id="tarjeta-perfil-editar" class="tarjeta oculto">
+        <h3 class="titulo-seccion titulo-subseccion" style="margin-top:0">Editar mis datos</h3>
+        <form id="formulario-perfil-editar">
+          <label class="etiqueta" for="perfil-nombre">Nombre</label>
+          <input class="entrada" type="text" id="perfil-nombre" required>
+
+          <label class="etiqueta" for="perfil-apellidos">Apellidos</label>
+          <input class="entrada" type="text" id="perfil-apellidos" required>
+
+          <label class="etiqueta" for="perfil-apodo">Apodo (opcional)</label>
+          <input class="entrada" type="text" id="perfil-apodo" placeholder="Como te conoce el equipo">
+
+          <label class="etiqueta" for="perfil-posicion-principal">Posición principal</label>
+          <select class="entrada" id="perfil-posicion-principal" required>
+            <option value="">Selecciona una posición</option>
+            <option value="DERECHA">Derecha</option>
+            <option value="REVÉS">Revés</option>
+            <option value="AMBAS">Ambas</option>
+          </select>
+
+          <label class="etiqueta" for="perfil-posicion-secundaria">Posición secundaria (opcional)</label>
+          <select class="entrada" id="perfil-posicion-secundaria">
+            <option value="">Sin posición secundaria</option>
+            <option value="DERECHA">Derecha</option>
+            <option value="REVÉS">Revés</option>
+            <option value="AMBAS">Ambas</option>
+          </select>
+
+          <p id="mensaje-error-perfil-editar" class="mensaje-error oculto"></p>
+
+          <div class="modal-botones">
+            <button type="button" class="boton boton-secundario" id="boton-cancelar-editar-perfil">Cancelar</button>
+            <button type="submit" class="boton boton-primario" id="boton-guardar-perfil">Guardar</button>
+          </div>
+        </form>
+      </div>
+
+      <div id="tarjeta-perfil-estadisticas" class="tarjeta oculto"></div>
+    </section>
+
+    <!-- VISTA: CALENDARIO (jugador) -->
+    <section id="vista-calendario" class="vista oculto">
+      <div class="cabecera-seccion">
+        <button class="boton-volver" id="boton-volver-calendario">← Volver</button>
+        <h1 class="titulo-seccion">Calendario</h1>
+      </div>
+
+      <div id="lista-calendario" class="lista-jugadores"></div>
+    </section>
+
+    <!-- VISTA: DETALLE DE JORNADA — SOLO LECTURA (jugador) -->
+    <section id="vista-jornada-lectura" class="vista oculto">
+      <div class="cabecera-seccion">
+        <button class="boton-volver" id="boton-volver-jornada-lectura">← Volver</button>
+        <h1 class="titulo-seccion">Jornada</h1>
+      </div>
+
+      <div class="tarjeta">
+        <span id="lectura-estado" class="insignia insignia-posicion"></span>
+        <h2 id="lectura-rival" class="titulo-bienvenida"></h2>
+        <p id="lectura-info" class="texto-secundario"></p>
+      </div>
+
+      <div id="lectura-bloque-parejas" class="oculto">
+        <h3 class="titulo-seccion titulo-subseccion">🎾 Parejas y resultados</h3>
+        <div id="lectura-lista-partidos" class="lista-jugadores"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL: crear / editar jugador -->
+  <div id="modal-jugador" class="modal-fondo oculto">
+    <div class="modal-caja">
+      <h2 id="modal-jugador-titulo" class="modal-titulo">Nuevo jugador</h2>
+
+      <form id="formulario-jugador">
+        <input type="hidden" id="jugador-id">
+
+        <label class="etiqueta" for="jugador-nombre">Nombre</label>
+        <input class="entrada" type="text" id="jugador-nombre" required>
+
+        <label class="etiqueta" for="jugador-apellidos">Apellidos</label>
+        <input class="entrada" type="text" id="jugador-apellidos" required>
+
+        <label class="etiqueta" for="jugador-apodo">Apodo (opcional)</label>
+        <input class="entrada" type="text" id="jugador-apodo" placeholder="Como le conoce el equipo">
+
+        <label class="etiqueta" for="jugador-posicion-principal">Posición principal</label>
+        <select class="entrada" id="jugador-posicion-principal" required>
+          <option value="">Selecciona una posición</option>
+          <option value="DERECHA">Derecha</option>
+          <option value="REVÉS">Revés</option>
+          <option value="AMBAS">Ambas</option>
+        </select>
+
+        <label class="etiqueta" for="jugador-posicion-secundaria">Posición secundaria (opcional)</label>
+        <select class="entrada" id="jugador-posicion-secundaria">
+          <option value="">Sin posición secundaria</option>
+          <option value="DERECHA">Derecha</option>
+          <option value="REVÉS">Revés</option>
+          <option value="AMBAS">Ambas</option>
+        </select>
+
+        <label class="etiqueta" for="jugador-puntuacion">Puntuación</label>
+        <input class="entrada" type="number" id="jugador-puntuacion" min="0" step="0.01" value="0" required>
+
+        <p id="mensaje-error-jugador" class="mensaje-error oculto"></p>
+
+        <div class="modal-botones">
+          <button type="button" class="boton boton-secundario" id="boton-cancelar-jugador">Cancelar</button>
+          <button type="submit" class="boton boton-primario" id="boton-guardar-jugador">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: nueva jornada -->
+  <div id="modal-jornada" class="modal-fondo oculto">
+    <div class="modal-caja">
+      <h2 class="modal-titulo">Nueva jornada</h2>
+
+      <form id="formulario-jornada">
+        <label class="etiqueta" for="jornada-fecha">Fecha</label>
+        <input class="entrada" type="date" id="jornada-fecha" required>
+
+        <label class="etiqueta" for="jornada-rival">Rival</label>
+        <input class="entrada" type="text" id="jornada-rival" required>
+
+        <label class="etiqueta" for="jornada-local-visitante">Local / Visitante</label>
+        <select class="entrada" id="jornada-local-visitante" required>
+          <option value="">Selecciona</option>
+          <option value="LOCAL">Local</option>
+          <option value="VISITANTE">Visitante</option>
+        </select>
+
+        <label class="etiqueta" for="jornada-lugar">Lugar (opcional)</label>
+        <input class="entrada" type="text" id="jornada-lugar">
+
+        <label class="etiqueta" for="jornada-observaciones">Observaciones (opcional)</label>
+        <input class="entrada" type="text" id="jornada-observaciones">
+
+        <p id="mensaje-error-jornada" class="mensaje-error oculto"></p>
+
+        <div class="modal-botones">
+          <button type="button" class="boton boton-secundario" id="boton-cancelar-jornada">Cancelar</button>
+          <button type="submit" class="boton boton-primario" id="boton-guardar-jornada">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: crear / editar usuario -->
+  <div id="modal-usuario" class="modal-fondo oculto">
+    <div class="modal-caja">
+      <h2 id="modal-usuario-titulo" class="modal-titulo">Nuevo usuario</h2>
+
+      <form id="formulario-usuario">
+        <input type="hidden" id="usuario-id">
+
+        <label class="etiqueta" for="usuario-nombre">Nombre de usuario</label>
+        <input class="entrada" type="text" id="usuario-nombre" required>
+
+        <label class="etiqueta" for="usuario-codigo">Código de acceso</label>
+        <input class="entrada" type="text" id="usuario-codigo" placeholder="Mínimo 4 caracteres">
+        <p class="texto-secundario texto-ayuda-codigo oculto">Déjalo en blanco para no cambiar el código actual.</p>
+
+        <label class="etiqueta" for="usuario-rol">Rol</label>
+        <select class="entrada" id="usuario-rol" required>
+          <option value="JUGADOR">Jugador</option>
+          <option value="CAPITAN">Capitán (todos los permisos)</option>
+        </select>
+
+        <label class="etiqueta" for="usuario-jugador">Jugador vinculado (opcional)</label>
+        <select class="entrada" id="usuario-jugador">
+          <option value="">Sin vincular</option>
+        </select>
+
+        <p id="mensaje-error-usuario" class="mensaje-error oculto"></p>
+
+        <div class="modal-botones">
+          <button type="button" class="boton boton-secundario" id="boton-cancelar-usuario">Cancelar</button>
+          <button type="submit" class="boton boton-primario" id="boton-guardar-usuario">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: registrar resultado de un partido -->
+  <div id="modal-resultado" class="modal-fondo oculto">
+    <div class="modal-caja">
+      <h2 id="modal-resultado-titulo" class="modal-titulo">Resultado del partido</h2>
+
+      <form id="formulario-resultado">
+        <input type="hidden" id="resultado-id-partido">
+
+        <label class="etiqueta">Sets</label>
+        <div class="fila-marcador">
+          <input class="entrada" type="number" id="resultado-sets-favor" min="0" max="3" placeholder="Nosotros" required>
+          <span class="separador-marcador">–</span>
+          <input class="entrada" type="number" id="resultado-sets-contra" min="0" max="3" placeholder="Rival" required>
+        </div>
+
+        <label class="etiqueta">Juegos totales (opcional, para desempatar estadísticas)</label>
+        <div class="fila-marcador">
+          <input class="entrada" type="number" id="resultado-juegos-favor" min="0" placeholder="Nosotros" value="0">
+          <span class="separador-marcador">–</span>
+          <input class="entrada" type="number" id="resultado-juegos-contra" min="0" placeholder="Rival" value="0">
+        </div>
+
+        <p id="mensaje-error-resultado" class="mensaje-error oculto"></p>
+
+        <div class="modal-botones">
+          <button type="button" class="boton boton-secundario" id="boton-cancelar-resultado">Cancelar</button>
+          <button type="submit" class="boton boton-primario" id="boton-guardar-resultado">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <footer class="pie-patrocinadores">
+    <p class="pie-titulo">Con el patrocinio de</p>
+    <div class="patrocinadores-fila">
+      <a class="patrocinador-tarjeta" href="https://hima.es" target="_blank" rel="noopener noreferrer">
+        <img src="assets/logo-hima.png" alt="HIMA">
+      </a>
+      <a class="patrocinador-tarjeta" href="https://www.facebook.com/comidasparallevarlacocinadelsur/" target="_blank" rel="noopener noreferrer">
+        <img src="assets/logo-cocinadelsur.jpg" alt="La Cocina del Sur">
+      </a>
+      <a class="patrocinador-tarjeta" href="https://bodegasbaron.es" target="_blank" rel="noopener noreferrer">
+        <img src="assets/logo-baron.png" alt="Bodegas Barón">
+      </a>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
