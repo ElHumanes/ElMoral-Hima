@@ -173,6 +173,17 @@
 
       <button class="boton boton-primario" id="boton-nueva-jornada">+ Nueva jornada</button>
 
+      <label class="etiqueta" for="filtro-jornadas">Mostrar</label>
+      <select class="entrada" id="filtro-jornadas">
+        <option value="TODAS">Todas</option>
+        <option value="PENDIENTE">Pendientes</option>
+        <option value="CONVOCATORIA_ABIERTA">Convocatoria abierta</option>
+        <option value="CONVOCATORIA_CERRADA">Convocatoria cerrada</option>
+        <option value="CONFIRMADA">Confirmada (10 elegidos)</option>
+        <option value="JUGADA">Jugada (resultados en curso)</option>
+        <option value="FINALIZADA">Finalizada</option>
+      </select>
+
       <p id="mensaje-jornadas" class="mensaje-error oculto"></p>
 
       <div id="lista-jornadas" class="lista-jugadores"></div>
@@ -219,31 +230,14 @@
       </div>
     </section>
 
-    <!-- VISTA: SELECCIÓN DE LOS 10 (gestión, solo capitán) -->
-    <section id="vista-seleccion" class="vista oculto">
-      <div class="cabecera-seccion">
-        <button class="boton-volver" id="boton-volver-seleccion">← Volver</button>
-        <h1 class="titulo-seccion">Selección de los 10</h1>
-      </div>
-
-      <p class="texto-secundario">Elige exactamente 10 jugadores de entre los que se han apuntado.</p>
-      <p class="etiqueta-rol" id="contador-seleccion">0 / 10</p>
-
-      <p id="mensaje-seleccion" class="mensaje-error oculto"></p>
-
-      <div id="lista-seleccionables" class="lista-jugadores"></div>
-
-      <button class="boton boton-primario" id="boton-confirmar-seleccion" disabled>Confirmar selección</button>
-    </section>
-
-    <!-- VISTA: GENERADOR DE PAREJAS (gestión, solo capitán) -->
+    <!-- VISTA: ELEGIR LAS 5 PAREJAS (gestión, solo capitán) — fusiona selección de los 10 y formación de parejas -->
     <section id="vista-parejas" class="vista oculto">
       <div class="cabecera-seccion">
         <button class="boton-volver" id="boton-volver-parejas">← Volver</button>
-        <h1 class="titulo-seccion">Generador de parejas</h1>
+        <h1 class="titulo-seccion" id="titulo-vista-parejas">Elegir las 5 parejas</h1>
       </div>
 
-      <p class="texto-secundario">Toca dos jugadores para formar una pareja. Se ordenarán solas por puntuación al guardar.</p>
+      <p class="texto-secundario" id="descripcion-vista-parejas">Toca dos jugadores para formar una pareja. Se ordenarán solas por puntuación al guardar.</p>
       <p class="etiqueta-rol" id="contador-parejas-formadas">0 / 5 parejas formadas</p>
 
       <p id="mensaje-parejas" class="mensaje-error oculto"></p>

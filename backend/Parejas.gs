@@ -28,6 +28,61 @@ function listarParejas(idJornada) {
 }
 
 /**
+ * Jugadores candidatos para formar las 5 parejas de una jornada, con las
+ * estadísticas que el capitán necesita para decidir (posición, partidos
+ * jugados/ganados, asistencia a convocatorias). El origen depende del
+ * estado de la jornada:
+ * - CONVOCATORIA_CERRADA (o antes de confirmar): todos los que dijeron
+ *   "me apunto" (pueden ser más de 10 — el capitán elige 5 parejas de entre
+ *   ellos, y esos 10 quedan como la selección de la jornada).
+ * - Cualquier estado posterior (CONFIRMADA en adelante): exactamente los
+ *   10 ya seleccionados, para poder rehacer las parejas.
+ */
+function listarJugadoresParaParejas(idJornada) {
+  if (!idJornada) throw new Error('Falta el identificador de la jornada.');
+
+  var jornada = leerFilas('JORNADAS').filter(function (j) { return j.id_jornada === idJornada; })[0];
+  if (!jornada) throw new Error('No se ha encontrado esa jornada.');
+
+  var idsPool;
+  if (jornada.estado === 'CONVOCATORIA_CERRADA') {
+    idsPool = listarConvocatoria(idJornada)
+      .filter(function (c) { return c.disponibilidad === 'ME_APUNTO'; })
+      .map(function (c) { return c.id_jugador; });
+  } else {
+    idsPool = listarSeleccionados(idJornada).map(function (s) { return s.id_jugador; });
+  }
+
+  if (idsPool.length === 0) return [];
+
+  var jugadorPorId = {};
+  leerFilas('JUGADORES').forEach(function (j) { jugadorPorId[j.id_jugador] = j; });
+
+  var stats = calcularEstadisticasBatch(idsPool);
+
+  return idsPool.map(function (id) {
+    var j = jugadorPorId[id] || {};
+    var s = stats[id] || {};
+    return {
+      id_jugador: id,
+      nombre_completo: j.nombre_completo || '',
+      apodo: j.apodo || '',
+      foto_url: j.foto_url || '',
+      posicion_principal: j.posicion_principal || '',
+      posicion_secundaria: j.posicion_secundaria || '',
+      puntuacion: Number(j.puntuacion) || 0,
+      partidos_jugados: s.partidos_jugados || 0,
+      victorias: s.victorias || 0,
+      porcentaje_victorias: s.porcentaje_victorias || 0,
+      confianza: s.confianza || 'MUY BAJA',
+      asistencia: s.asistencia || { convocatorias_totales: 0, veces_apuntado: 0, porcentaje_asistencia: 0 }
+    };
+  }).sort(function (a, b) {
+    return (a.apodo || a.nombre_completo).localeCompare(b.apodo || b.nombre_completo, 'es');
+  });
+}
+
+/**
  * Compara las posiciones de dos jugadores y devuelve BUENA (✓), REGULAR (⚠)
  * o MALA (❌). BUENA = uno puede jugar de derecha y el otro de revés.
  * REGULAR = ambos pueden cubrir alguna posición pero no la combinación ideal.

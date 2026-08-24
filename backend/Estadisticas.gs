@@ -121,6 +121,95 @@ function nivelConfianza(numeroPartidos) {
   return 'MUY BAJA';
 }
 
+/**
+ * Calcula partidos jugados/ganados, % de victorias, confianza y asistencia
+ * para VARIOS jugadores a la vez, leyendo cada hoja una sola vez — en vez de
+ * llamar a obtenerEstadisticasJugador() en un bucle, que releía por
+ * completo JORNADAS/PAREJAS/PARTIDOS/RESULTADOS/CONVOCATORIAS/SELECCIONADOS
+ * y CONFIG por cada jugador (con muchos jugadores, esto era lentísimo: el
+ * mismo fallo que ya se corrigió en el motor de recomendación).
+ */
+function calcularEstadisticasBatch(idsJugadores) {
+  var idsSet = {};
+  idsJugadores.forEach(function (id) { idsSet[id] = true; });
+
+  var jornadasConConvocatoria = leerFilas('JORNADAS').filter(function (j) { return j.estado !== 'PENDIENTE'; }).length;
+
+  var parejas = leerFilas('PAREJAS');
+  var parejaPorId = {};
+  parejas.forEach(function (p) { parejaPorId[p.id_pareja] = p; });
+
+  var partidos = leerFilas('PARTIDOS');
+  var partidoPorId = {};
+  partidos.forEach(function (p) { partidoPorId[p.id_partido] = p; });
+
+  var resultadoPorJugador = {};
+  idsJugadores.forEach(function (id) { resultadoPorJugador[id] = []; });
+
+  leerFilas('RESULTADOS').forEach(function (r) {
+    var partido = partidoPorId[r.id_partido];
+    var pareja = partido ? parejaPorId[partido.id_pareja] : null;
+    if (!pareja) return;
+    [pareja.id_jugador_a, pareja.id_jugador_b].forEach(function (idJugador) {
+      if (idsSet[idJugador]) resultadoPorJugador[idJugador].push(r.resultado);
+    });
+  });
+
+  var meApuntoPorJugador = {};
+  leerFilas('CONVOCATORIAS').forEach(function (c) {
+    if (idsSet[c.id_jugador] && c.disponibilidad === 'ME_APUNTO') {
+      meApuntoPorJugador[c.id_jugador] = (meApuntoPorJugador[c.id_jugador] || 0) + 1;
+    }
+  });
+
+  var vecesSeleccionadoPorJugador = {};
+  leerFilas('SELECCIONADOS').forEach(function (s) {
+    if (idsSet[s.id_jugador]) {
+      vecesSeleccionadoPorJugador[s.id_jugador] = (vecesSeleccionadoPorJugador[s.id_jugador] || 0) + 1;
+    }
+  });
+
+  var valorConfig = {};
+  leerFilas('CONFIG').forEach(function (c) { valorConfig[c.clave] = Number(c.valor); });
+  var umbralBaja = valorConfig['UMBRAL_BAJA'] || 3;
+  var umbralMedia = valorConfig['UMBRAL_MEDIA'] || 6;
+  var umbralAlta = valorConfig['UMBRAL_ALTA'] || 11;
+  var umbralMuyAlta = valorConfig['UMBRAL_MUY_ALTA'] || 21;
+  function confianzaDesdeNumero(n) {
+    if (n >= umbralMuyAlta) return 'MUY ALTA';
+    if (n >= umbralAlta) return 'ALTA';
+    if (n >= umbralMedia) return 'MEDIA';
+    if (n >= umbralBaja) return 'BAJA';
+    return 'MUY BAJA';
+  }
+
+  var resultado = {};
+  idsJugadores.forEach(function (id) {
+    var resultados = resultadoPorJugador[id] || [];
+    var jugados = resultados.length;
+    var victorias = resultados.filter(function (r) { return r === 'GANADO'; }).length;
+    var meApunto = meApuntoPorJugador[id] || 0;
+    var vecesSel = vecesSeleccionadoPorJugador[id] || 0;
+
+    resultado[id] = {
+      partidos_jugados: jugados,
+      victorias: victorias,
+      derrotas: jugados - victorias,
+      porcentaje_victorias: jugados > 0 ? Math.round((victorias / jugados) * 1000) / 10 : 0,
+      confianza: confianzaDesdeNumero(jugados),
+      asistencia: {
+        convocatorias_totales: jornadasConConvocatoria,
+        veces_apuntado: meApunto,
+        porcentaje_asistencia: jornadasConConvocatoria > 0 ? Math.round((meApunto / jornadasConConvocatoria) * 1000) / 10 : 0,
+        veces_seleccionado: vecesSel,
+        porcentaje_seleccion: meApunto > 0 ? Math.round((vecesSel / meApunto) * 1000) / 10 : 0
+      }
+    };
+  });
+
+  return resultado;
+}
+
 /** Ranking de todos los jugadores activos, de mayor a menor % de victorias. Solo capitán. */
 function listarRankingJugadores(sesion) {
   requerirCapitan(sesion);
@@ -129,12 +218,21 @@ function listarRankingJugadores(sesion) {
 
 function calcularRankingJugadores() {
   var jugadores = leerFilas('JUGADORES').filter(function (j) { return j.estado === 'ACTIVO'; });
+  var stats = calcularEstadisticasBatch(jugadores.map(function (j) { return j.id_jugador; }));
+
   return jugadores.map(function (j) {
-    var stats = obtenerEstadisticasJugador(j.id_jugador);
-    stats.nombre_completo = j.nombre_completo;
-    stats.apodo = j.apodo;
-    stats.foto_url = j.foto_url || '';
-    return stats;
+    var s = stats[j.id_jugador] || {};
+    return {
+      id_jugador: j.id_jugador,
+      nombre_completo: j.nombre_completo,
+      apodo: j.apodo,
+      foto_url: j.foto_url || '',
+      partidos_jugados: s.partidos_jugados || 0,
+      victorias: s.victorias || 0,
+      derrotas: s.derrotas || 0,
+      porcentaje_victorias: s.porcentaje_victorias || 0,
+      confianza: s.confianza || 'MUY BAJA'
+    };
   }).sort(function (a, b) {
     if (b.porcentaje_victorias !== a.porcentaje_victorias) return b.porcentaje_victorias - a.porcentaje_victorias;
     return b.partidos_jugados - a.partidos_jugados;

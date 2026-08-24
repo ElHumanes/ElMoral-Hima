@@ -29,8 +29,9 @@ function listarJornadas() {
     };
   });
 
+  // Más recientes primero.
   jornadas.sort(function (a, b) {
-    return String(a.fecha).localeCompare(String(b.fecha));
+    return String(b.fecha).localeCompare(String(a.fecha));
   });
 
   return jornadas;

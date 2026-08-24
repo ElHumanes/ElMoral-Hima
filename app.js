@@ -597,6 +597,7 @@ function manejarEnvioUsuario(evento) {
  * ======================================================================= */
 
 var jornadaActual = null;
+var jornadasCache = [];
 
 function irAVistaJornadas() {
   mostrarVista('vista-jornadas');
@@ -615,7 +616,8 @@ function cargarJornadas() {
       if (!resultado.ok) {
         throw new Error(resultado.error || 'No se han podido cargar las jornadas.');
       }
-      pintarJornadas(resultado.jornadas);
+      jornadasCache = resultado.jornadas;
+      pintarJornadasFiltradas();
     })
     .catch(function (error) {
       contenedor.innerHTML = '';
@@ -624,11 +626,21 @@ function cargarJornadas() {
     });
 }
 
+function pintarJornadasFiltradas() {
+  var filtro = document.getElementById('filtro-jornadas').value;
+  var jornadas = filtro === 'TODAS'
+    ? jornadasCache
+    : jornadasCache.filter(function (j) { return j.estado === filtro; });
+  pintarJornadas(jornadas);
+}
+
 function pintarJornadas(jornadas) {
   var contenedor = document.getElementById('lista-jornadas');
 
   if (jornadas.length === 0) {
-    contenedor.innerHTML = '<p class="texto-vacio">Todavía no hay jornadas. Pulsa "+ Nueva jornada" para crear la primera.</p>';
+    contenedor.innerHTML = jornadasCache.length === 0
+      ? '<p class="texto-vacio">Todavía no hay jornadas. Pulsa "+ Nueva jornada" para crear la primera.</p>'
+      : '<p class="texto-vacio">No hay ninguna jornada con este filtro.</p>';
     return;
   }
 
@@ -911,9 +923,9 @@ function pintarAccionesJornada(jornada) {
       cambiarEstadoJornadaYRecargar(jornada.id_jornada, 'CONVOCATORIA_CERRADA');
     });
   } else if (jornada.estado === 'CONVOCATORIA_CERRADA') {
-    boton.textContent = 'Seleccionar los 10';
+    boton.textContent = 'Elegir las 5 parejas';
     boton.addEventListener('click', function () {
-      irAVistaSeleccion(jornada);
+      irAVistaParejas(jornada);
     });
   } else if (jornada.estado === 'CONFIRMADA') {
     boton.textContent = 'Crear / rehacer parejas';
@@ -1049,134 +1061,67 @@ function pintarListaConvocatoria(idContenedor, jugadores) {
 }
 
 /* ==========================================================================
- * SELECCIÓN DE LOS 10 (capitán)
- * ======================================================================= */
-
-var seleccionJornadaId = null;
-var seleccionMarcados = [];
-
-function irAVistaSeleccion(jornada) {
-  seleccionJornadaId = jornada.id_jornada;
-  seleccionMarcados = [];
-  mostrarVista('vista-seleccion');
-  document.getElementById('mensaje-seleccion').classList.add('oculto');
-  actualizarContadorSeleccion();
-
-  var guardada = obtenerSesionGuardada();
-  var contenedor = document.getElementById('lista-seleccionables');
-  contenedor.innerHTML = '<p class="texto-vacio">Cargando...</p>';
-
-  llamarApi('listarConvocatoria', { token: guardada.token, id_jornada: jornada.id_jornada }).then(function (resultado) {
-    if (!resultado.ok) return;
-
-    var apuntados = resultado.convocatoria.filter(function (c) { return c.disponibilidad === 'ME_APUNTO'; });
-
-    if (apuntados.length === 0) {
-      contenedor.innerHTML = '<p class="texto-vacio">Todavía no hay ningún jugador apuntado a esta convocatoria.</p>';
-      return;
-    }
-
-    contenedor.innerHTML = '';
-    apuntados.forEach(function (jugador) {
-      contenedor.appendChild(crearTarjetaSeleccionable(jugador));
-    });
-  });
-}
-
-function crearTarjetaSeleccionable(jugador) {
-  var tarjeta = document.createElement('div');
-  tarjeta.className = 'jugador-tarjeta seleccionable';
-  tarjeta.innerHTML =
-    '<div class="jugador-info"><span class="jugador-nombre"></span></div>' +
-    '<span class="marca-seleccion">✓</span>';
-  tarjeta.querySelector('.jugador-nombre').textContent = jugador.apodo || jugador.nombre_completo;
-  tarjeta.insertBefore(crearAvatar(jugador, 'avatar-mediano'), tarjeta.firstChild);
-
-  tarjeta.addEventListener('click', function () {
-    var indice = seleccionMarcados.indexOf(jugador.id_jugador);
-    if (indice === -1) {
-      if (seleccionMarcados.length >= 10) {
-        return; // Ya hay 10 marcados, no se puede añadir más.
-      }
-      seleccionMarcados.push(jugador.id_jugador);
-      tarjeta.classList.add('marcada');
-    } else {
-      seleccionMarcados.splice(indice, 1);
-      tarjeta.classList.remove('marcada');
-    }
-    actualizarContadorSeleccion();
-  });
-
-  return tarjeta;
-}
-
-function actualizarContadorSeleccion() {
-  document.getElementById('contador-seleccion').textContent = seleccionMarcados.length + ' / 10';
-  document.getElementById('boton-confirmar-seleccion').disabled = seleccionMarcados.length !== 10;
-}
-
-function manejarConfirmarSeleccion() {
-  var guardada = obtenerSesionGuardada();
-  var mensajeError = document.getElementById('mensaje-seleccion');
-  var boton = document.getElementById('boton-confirmar-seleccion');
-
-  mensajeError.classList.add('oculto');
-  boton.disabled = true;
-  boton.textContent = 'Guardando...';
-
-  llamarApi('guardarSeleccion', {
-    token: guardada.token,
-    id_jornada: seleccionJornadaId,
-    ids_jugadores: seleccionMarcados
-  })
-    .then(function (resultado) {
-      if (resultado.ok) {
-        irAVistaJornadas();
-      } else {
-        mensajeError.textContent = resultado.error || 'No se ha podido guardar la selección.';
-        mensajeError.classList.remove('oculto');
-      }
-    })
-    .catch(function () {
-      mensajeError.textContent = 'No se ha podido conectar con el servidor.';
-      mensajeError.classList.remove('oculto');
-    })
-    .finally(function () {
-      boton.textContent = 'Confirmar selección';
-      actualizarContadorSeleccion();
-    });
-}
-
-/* ==========================================================================
- * GENERADOR DE PAREJAS (capitán)
+ * ELEGIR LAS 5 PAREJAS (capitán) — fusiona la selección de los 10 con la
+ * formación de parejas: el capitán toca directamente parejas de jugadores
+ * (de entre los apuntados, o de entre los 10 ya seleccionados si se están
+ * rehaciendo), viendo su posición, su historial y su asistencia.
  * ======================================================================= */
 
 var parejasJornadaId = null;
+var parejasJornadaEstado = null;
 var parejasDisponibles = [];
 var parejasFormadas = [];
 var parejaEnFormacionIds = [];
 
 function irAVistaParejas(jornada) {
   parejasJornadaId = jornada.id_jornada;
+  parejasJornadaEstado = jornada.estado;
+  parejasDisponibles = [];
   parejasFormadas = [];
   parejaEnFormacionIds = [];
   mostrarVista('vista-parejas');
   document.getElementById('mensaje-parejas').classList.add('oculto');
   document.getElementById('vista-previa-pareja').classList.add('oculto');
+  pintarParejasFormadas(); // limpia cualquier resto visual de una jornada anterior
+
+  var esSeleccionInicial = jornada.estado === 'CONVOCATORIA_CERRADA';
+  document.getElementById('titulo-vista-parejas').textContent = esSeleccionInicial ? 'Elegir las 5 parejas' : 'Rehacer parejas';
+  document.getElementById('descripcion-vista-parejas').textContent = esSeleccionInicial
+    ? 'Toca dos jugadores apuntados para formar una pareja. Los 10 que queden emparejados serán los seleccionados para esta jornada.'
+    : 'Toca dos jugadores para formar una pareja. Se ordenarán solas por puntuación al guardar.';
 
   var guardada = obtenerSesionGuardada();
   var contenedor = document.getElementById('lista-disponibles-parejas');
   contenedor.innerHTML = '<p class="texto-vacio">Cargando...</p>';
 
-  llamarApi('listarSeleccionados', { token: guardada.token, id_jornada: jornada.id_jornada }).then(function (resultado) {
-    if (!resultado.ok || resultado.seleccionados.length !== 10) {
-      contenedor.innerHTML = '<p class="texto-vacio">No se han encontrado los 10 jugadores seleccionados.</p>';
+  llamarApi('listarJugadoresParaParejas', { token: guardada.token, id_jornada: jornada.id_jornada }).then(function (resultado) {
+    if (!resultado.ok) {
+      contenedor.innerHTML = '<p class="texto-vacio">' + (resultado.error || 'No se han podido cargar los jugadores.') + '</p>';
       return;
     }
-    parejasDisponibles = resultado.seleccionados;
+    if (resultado.jugadores.length < 10) {
+      contenedor.innerHTML = esSeleccionInicial
+        ? '<p class="texto-vacio">Todavía no hay al menos 10 jugadores apuntados a esta convocatoria (hay ' + resultado.jugadores.length + ').</p>'
+        : '<p class="texto-vacio">No se han encontrado los 10 jugadores seleccionados.</p>';
+      return;
+    }
+    parejasDisponibles = resultado.jugadores;
     pintarDisponiblesParejas();
     pintarParejasFormadas();
   });
+}
+
+/** Texto de resumen de un jugador para la pantalla de parejas: posición, récord y asistencia. */
+function textoStatsJugador(jugador) {
+  var posicion = (POSICIONES_TEXTO[jugador.posicion_principal] || jugador.posicion_principal || '') +
+    (jugador.posicion_secundaria ? ' / ' + (POSICIONES_TEXTO[jugador.posicion_secundaria] || jugador.posicion_secundaria) : '');
+  var record = jugador.partidos_jugados > 0
+    ? jugador.victorias + 'V-' + (jugador.partidos_jugados - jugador.victorias) + 'D (' + jugador.porcentaje_victorias + '%)'
+    : 'Sin partidos todavía';
+  var asistencia = jugador.asistencia
+    ? 'Asistencia ' + jugador.asistencia.porcentaje_asistencia + '%'
+    : '';
+  return [posicion, record, asistencia].filter(Boolean).join(' · ');
 }
 
 function calcularCompatibilidadCliente(a, b) {
@@ -1219,9 +1164,13 @@ function pintarDisponiblesParejas() {
       tarjeta.classList.add('marcada');
     }
     tarjeta.innerHTML =
-      '<div class="jugador-info"><span class="jugador-nombre"></span></div>' +
+      '<div class="jugador-info">' +
+        '<span class="jugador-nombre"></span>' +
+        '<div class="jugador-meta"><span></span></div>' +
+      '</div>' +
       '<span class="marca-seleccion">✓</span>';
     tarjeta.querySelector('.jugador-nombre').textContent = jugador.apodo || jugador.nombre_completo;
+    tarjeta.querySelector('.jugador-meta span').textContent = textoStatsJugador(jugador);
     tarjeta.insertBefore(crearAvatar(jugador, 'avatar-mediano'), tarjeta.firstChild);
 
     tarjeta.addEventListener('click', function () {
@@ -1331,13 +1280,24 @@ function manejarGuardarParejas() {
   boton.disabled = true;
   boton.textContent = 'Guardando...';
 
-  llamarApi('guardarParejas', {
-    token: guardada.token,
-    id_jornada: parejasJornadaId,
-    parejas: parejasFormadas.map(function (p) {
-      return { id_jugador_a: p.id_jugador_a, id_jugador_b: p.id_jugador_b };
+  var idsUsados = [];
+  parejasFormadas.forEach(function (p) { idsUsados.push(p.id_jugador_a, p.id_jugador_b); });
+
+  var pasoSeleccion = parejasJornadaEstado === 'CONVOCATORIA_CERRADA'
+    ? llamarApi('guardarSeleccion', { token: guardada.token, id_jornada: parejasJornadaId, ids_jugadores: idsUsados })
+    : Promise.resolve({ ok: true });
+
+  pasoSeleccion
+    .then(function (resultadoSeleccion) {
+      if (!resultadoSeleccion.ok) throw new Error(resultadoSeleccion.error || 'No se ha podido guardar la selección de jugadores.');
+      return llamarApi('guardarParejas', {
+        token: guardada.token,
+        id_jornada: parejasJornadaId,
+        parejas: parejasFormadas.map(function (p) {
+          return { id_jugador_a: p.id_jugador_a, id_jugador_b: p.id_jugador_b };
+        })
+      });
     })
-  })
     .then(function (resultado) {
       if (resultado.ok) {
         irAVistaJornadas();
@@ -1346,8 +1306,8 @@ function manejarGuardarParejas() {
         mensajeError.classList.remove('oculto');
       }
     })
-    .catch(function () {
-      mensajeError.textContent = 'No se ha podido conectar con el servidor.';
+    .catch(function (error) {
+      mensajeError.textContent = error.message || 'No se ha podido conectar con el servidor.';
       mensajeError.classList.remove('oculto');
     })
     .finally(function () {
@@ -2044,6 +2004,7 @@ document.addEventListener('DOMContentLoaded', function () {
   document.getElementById('boton-nueva-jornada').addEventListener('click', abrirModalJornada);
   document.getElementById('boton-cancelar-jornada').addEventListener('click', cerrarModalJornada);
   document.getElementById('formulario-jornada').addEventListener('submit', manejarEnvioJornada);
+  document.getElementById('filtro-jornadas').addEventListener('change', pintarJornadasFiltradas);
 
   document.getElementById('boton-ir-perfil').addEventListener('click', irAVistaPerfil);
   document.getElementById('boton-volver-perfil').addEventListener('click', function () {
@@ -2063,9 +2024,6 @@ document.addEventListener('DOMContentLoaded', function () {
   document.getElementById('boton-volver-dashboard').addEventListener('click', function () {
     mostrarVista('vista-inicio');
   });
-
-  document.getElementById('boton-volver-seleccion').addEventListener('click', irAVistaJornadas);
-  document.getElementById('boton-confirmar-seleccion').addEventListener('click', manejarConfirmarSeleccion);
 
   document.getElementById('boton-volver-parejas').addEventListener('click', irAVistaJornadas);
   document.getElementById('boton-guardar-parejas').addEventListener('click', manejarGuardarParejas);

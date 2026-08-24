@@ -81,6 +81,10 @@ function manejarPeticion(e) {
         if (!validarSesion(params.token)) return respuestaError('Sesión no válida o caducada.');
         return respuestaOk({ parejas: listarParejas(params.id_jornada) });
 
+      case 'listarJugadoresParaParejas':
+        if (!validarSesion(params.token)) return respuestaError('Sesión no válida o caducada.');
+        return respuestaOk({ jugadores: listarJugadoresParaParejas(params.id_jornada) });
+
       case 'guardarParejas':
         return respuestaJson(guardarParejas(requerirSesionValida(params.token), params.id_jornada, params.parejas));
 
