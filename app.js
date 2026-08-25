@@ -1690,9 +1690,9 @@ var CONFIANZA_TEXTO = {
   'MUY ALTA': 'confianza muy alta'
 };
 
-function cargarEstadisticasPerfil(idJugador) {
+function cargarEstadisticasPerfil(idJugador, idContenedor) {
   var guardada = obtenerSesionGuardada();
-  var contenedor = document.getElementById('tarjeta-perfil-estadisticas');
+  var contenedor = document.getElementById(idContenedor || 'tarjeta-perfil-estadisticas');
 
   Promise.all([
     llamarApi('obtenerEstadisticasJugador', { token: guardada.token, id_jugador: idJugador }),
@@ -1933,6 +1933,96 @@ function crearTarjetaResultado(r) {
 }
 
 /* ==========================================================================
+ * ESTADÍSTICAS (jugador) — la misma información que en "Mi perfil", pero
+ * como apartado propio accesible directamente desde el inicio.
+ * ======================================================================= */
+
+function irAVistaEstadisticasJugador() {
+  mostrarVista('vista-estadisticas-jugador');
+  var guardada = obtenerSesionGuardada();
+  var contenedor = document.getElementById('tarjeta-estadisticas-jugador');
+  contenedor.classList.remove('oculto');
+  contenedor.innerHTML = '<p class="texto-vacio">Cargando...</p>';
+  cargarEstadisticasPerfil(guardada.id_jugador, 'tarjeta-estadisticas-jugador');
+}
+
+/* ==========================================================================
+ * CLASIFICACIÓN (jugador) — ranking de jugadores y de parejas del equipo,
+ * y el resultado (victorias-derrotas) de cada jornada ya jugada.
+ * ======================================================================= */
+
+function irAVistaClasificacion() {
+  mostrarVista('vista-clasificacion');
+  cargarClasificacion();
+}
+
+function cargarClasificacion() {
+  var guardada = obtenerSesionGuardada();
+  var listaRanking = document.getElementById('clasificacion-ranking-jugadores');
+  var listaParejas = document.getElementById('clasificacion-ranking-parejas');
+  var listaJornadas = document.getElementById('clasificacion-resumen-jornadas');
+  listaRanking.innerHTML = '<p class="texto-vacio">Cargando...</p>';
+  listaParejas.innerHTML = '<p class="texto-vacio">Cargando...</p>';
+  listaJornadas.innerHTML = '<p class="texto-vacio">Cargando...</p>';
+
+  Promise.all([
+    llamarApi('listarRankingJugadores', { token: guardada.token }),
+    llamarApi('listarEstadisticasParejas', { token: guardada.token }),
+    llamarApi('listarResumenJornadas', { token: guardada.token })
+  ]).then(function (respuestas) {
+    var ranking = respuestas[0], parejas = respuestas[1], resumen = respuestas[2];
+
+    if (ranking.ok) {
+      pintarRankingJugadores(ranking.ranking, 'clasificacion-ranking-jugadores');
+    } else {
+      listaRanking.innerHTML = '<p class="texto-vacio">' + (ranking.error || 'No se ha podido cargar.') + '</p>';
+    }
+    if (parejas.ok) {
+      pintarRankingParejas(parejas.parejas, 'clasificacion-ranking-parejas');
+    } else {
+      listaParejas.innerHTML = '<p class="texto-vacio">' + (parejas.error || 'No se ha podido cargar.') + '</p>';
+    }
+    if (resumen.ok) {
+      pintarResumenJornadas(resumen.resumen);
+    } else {
+      listaJornadas.innerHTML = '<p class="texto-vacio">' + (resumen.error || 'No se ha podido cargar.') + '</p>';
+    }
+  }).catch(function () {
+    var mensaje = '<p class="texto-vacio">No se ha podido conectar con el servidor.</p>';
+    listaRanking.innerHTML = mensaje;
+    listaParejas.innerHTML = mensaje;
+    listaJornadas.innerHTML = mensaje;
+  });
+}
+
+function pintarResumenJornadas(resumen) {
+  var contenedor = document.getElementById('clasificacion-resumen-jornadas');
+
+  if (resumen.length === 0) {
+    contenedor.innerHTML = '<p class="texto-vacio">Todavía no hay ninguna jornada jugada.</p>';
+    return;
+  }
+
+  contenedor.innerHTML = '';
+  resumen.forEach(function (r) {
+    var fila = document.createElement('div');
+    fila.className = 'jornada-tarjeta';
+    fila.innerHTML =
+      '<div class="jornada-info">' +
+        '<span class="jornada-rival"></span>' +
+        '<span class="jornada-meta"></span>' +
+        '<span class="insignia"></span>' +
+      '</div>';
+    fila.querySelector('.jornada-rival').textContent = (r.local_visitante === 'LOCAL' ? 'vs ' : '@ ') + r.rival;
+    fila.querySelector('.jornada-meta').textContent = formatearFecha(r.fecha) + ' · ' + r.partidos_jugados + ' partidos jugados';
+    var insignia = fila.querySelector('.insignia');
+    insignia.className = 'insignia ' + (r.victorias >= r.derrotas ? 'insignia-compat-buena' : 'insignia-compat-mala');
+    insignia.textContent = r.victorias + 'V - ' + r.derrotas + 'D';
+    contenedor.appendChild(fila);
+  });
+}
+
+/* ==========================================================================
  * DASHBOARD / ESTADÍSTICAS (capitán)
  * ======================================================================= */
 
@@ -2010,8 +2100,8 @@ function pintarResumenDashboard(d) {
   }
 }
 
-function pintarRankingJugadores(ranking) {
-  var contenedor = document.getElementById('lista-ranking-jugadores');
+function pintarRankingJugadores(ranking, idContenedor) {
+  var contenedor = document.getElementById(idContenedor || 'lista-ranking-jugadores');
   var conPartidos = ranking.filter(function (r) { return r.partidos_jugados > 0; });
 
   if (conPartidos.length === 0) {
@@ -2038,8 +2128,8 @@ function pintarRankingJugadores(ranking) {
   });
 }
 
-function pintarRankingParejas(parejas) {
-  var contenedor = document.getElementById('lista-ranking-parejas');
+function pintarRankingParejas(parejas, idContenedor) {
+  var contenedor = document.getElementById(idContenedor || 'lista-ranking-parejas');
 
   if (parejas.length === 0) {
     contenedor.innerHTML = '<p class="texto-vacio">Todavía no hay parejas con partidos jugados.</p>';
@@ -2130,6 +2220,16 @@ document.addEventListener('DOMContentLoaded', function () {
   });
   document.getElementById('boton-resultados-mios').addEventListener('click', function () {
     cambiarModoResultados('MIOS');
+  });
+
+  document.getElementById('boton-ir-estadisticas-jugador').addEventListener('click', irAVistaEstadisticasJugador);
+  document.getElementById('boton-volver-estadisticas-jugador').addEventListener('click', function () {
+    mostrarVista('vista-inicio');
+  });
+
+  document.getElementById('boton-ir-clasificacion').addEventListener('click', irAVistaClasificacion);
+  document.getElementById('boton-volver-clasificacion').addEventListener('click', function () {
+    mostrarVista('vista-inicio');
   });
 
   document.getElementById('boton-ir-dashboard').addEventListener('click', irAVistaDashboard);

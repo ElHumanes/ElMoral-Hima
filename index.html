@@ -103,6 +103,14 @@
           <span class="tarjeta-menu-icono">🎾</span>
           <span class="tarjeta-menu-texto">Resultados</span>
         </button>
+        <button class="tarjeta-menu" id="boton-ir-estadisticas-jugador">
+          <span class="tarjeta-menu-icono">📊</span>
+          <span class="tarjeta-menu-texto">Estadísticas</span>
+        </button>
+        <button class="tarjeta-menu" id="boton-ir-clasificacion">
+          <span class="tarjeta-menu-icono">🏆</span>
+          <span class="tarjeta-menu-texto">Clasificación</span>
+        </button>
       </div>
 
       <div id="tarjeta-convocatoria-jugador" class="tarjeta oculto">
@@ -373,6 +381,33 @@
       </div>
 
       <div id="lista-resultados" class="lista-jugadores"></div>
+    </section>
+
+    <!-- VISTA: ESTADÍSTICAS (jugador) — las mismas que en "Mi perfil", como apartado propio -->
+    <section id="vista-estadisticas-jugador" class="vista oculto">
+      <div class="cabecera-seccion">
+        <button class="boton-volver" id="boton-volver-estadisticas-jugador">← Volver</button>
+        <h1 class="titulo-seccion">Estadísticas</h1>
+      </div>
+
+      <div id="tarjeta-estadisticas-jugador" class="tarjeta"></div>
+    </section>
+
+    <!-- VISTA: CLASIFICACIÓN (jugador) — ranking del equipo y resultado de cada jornada -->
+    <section id="vista-clasificacion" class="vista oculto">
+      <div class="cabecera-seccion">
+        <button class="boton-volver" id="boton-volver-clasificacion">← Volver</button>
+        <h1 class="titulo-seccion">Clasificación</h1>
+      </div>
+
+      <h3 class="titulo-seccion titulo-subseccion" style="margin-top:0">🏅 Ranking de jugadores</h3>
+      <div id="clasificacion-ranking-jugadores" class="lista-jugadores"></div>
+
+      <h3 class="titulo-seccion titulo-subseccion">🤝 Ranking de parejas</h3>
+      <div id="clasificacion-ranking-parejas" class="lista-jugadores"></div>
+
+      <h3 class="titulo-seccion titulo-subseccion">📅 Resultado por jornada</h3>
+      <div id="clasificacion-resumen-jornadas" class="lista-jugadores"></div>
     </section>
 
   </main>
