@@ -147,6 +147,21 @@ body {
   background: var(--color-surface);
 }
 
+.fila-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 16px 0 6px;
+  font-size: 15px;
+  color: var(--color-text);
+}
+
+.fila-checkbox input {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
 .boton {
   width: 100%;
   padding: 15px 16px;
@@ -752,6 +767,11 @@ select.entrada {
 .insignia-compat-mala {
   background: var(--color-danger-bg);
   color: var(--color-danger);
+}
+
+.insignia-puntos {
+  background: rgba(37, 99, 235, 0.12);
+  color: var(--color-primary);
 }
 
 .pareja-tarjeta {

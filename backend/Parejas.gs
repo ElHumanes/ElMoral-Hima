@@ -1,7 +1,7 @@
 /**
  * Generador de parejas: a partir de los 10 jugadores seleccionados de una
  * jornada, el capitán forma 5 parejas. Se calcula automáticamente la
- * compatibilidad de posiciones (DERECHA/REVÉS/AMBAS) y se ordenan los
+ * compatibilidad de posiciones (DERECHA/REVÉS) y se ordenan los
  * partidos del 1 al 5 por puntuación combinada (de mayor a menor).
  */
 
@@ -103,6 +103,8 @@ function calcularCompatibilidad(jugadorA, jugadorB) {
 function posicionesJugables(principal, secundaria) {
   var set = {};
   function agregar(p) {
+    // "AMBAS" ya no es un valor nuevo, pero se mantiene el caso por si queda
+    // algún jugador antiguo sin migrar (ver migrarPosicionesAmbas en Jugadores.gs).
     if (p === 'AMBAS') { set['DERECHA'] = true; set['REVÉS'] = true; }
     else if (p) { set[p] = true; }
   }

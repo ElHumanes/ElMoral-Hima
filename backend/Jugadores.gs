@@ -3,7 +3,26 @@
  * Solo el capitán puede modificar; cualquier usuario con sesión válida puede listar.
  */
 
-var POSICIONES_VALIDAS = ['DERECHA', 'REVÉS', 'AMBAS'];
+var POSICIONES_VALIDAS = ['DERECHA', 'REVÉS'];
+
+/**
+ * Valida principal/secundaria con las reglas nuevas: el jugador elige una
+ * posición principal (Derecha o Revés) y, si juega también en el otro lado,
+ * la secundaria solo puede ser la contraria. Ya no existe "Ambas".
+ */
+function validarPosiciones(posicionPrincipal, posicionSecundaria) {
+  if (POSICIONES_VALIDAS.indexOf(posicionPrincipal) === -1) {
+    throw new Error('La posición principal debe ser Derecha o Revés.');
+  }
+  if (posicionSecundaria) {
+    if (POSICIONES_VALIDAS.indexOf(posicionSecundaria) === -1) {
+      throw new Error('La posición secundaria debe ser Derecha, Revés, o estar vacía.');
+    }
+    if (posicionSecundaria === posicionPrincipal) {
+      throw new Error('La posición secundaria tiene que ser la contraria a la principal.');
+    }
+  }
+}
 
 function listarJugadores() {
   return leerFilas('JUGADORES').map(function (j) {
@@ -36,12 +55,7 @@ function crearJugador(sesion, datos) {
 
   if (!nombre) throw new Error('El nombre es obligatorio.');
   if (!apellidos) throw new Error('Los apellidos son obligatorios.');
-  if (POSICIONES_VALIDAS.indexOf(posicionPrincipal) === -1) {
-    throw new Error('La posición principal debe ser DERECHA, REVÉS o AMBAS.');
-  }
-  if (posicionSecundaria && POSICIONES_VALIDAS.indexOf(posicionSecundaria) === -1) {
-    throw new Error('La posición secundaria debe ser DERECHA, REVÉS, AMBAS o estar vacía.');
-  }
+  validarPosiciones(posicionPrincipal, posicionSecundaria);
   if (isNaN(puntuacion) || puntuacion < 0) {
     throw new Error('La puntuación debe ser un número igual o mayor que 0.');
   }
@@ -87,12 +101,7 @@ function editarJugador(sesion, datos) {
 
   if (!nombre) throw new Error('El nombre es obligatorio.');
   if (!apellidos) throw new Error('Los apellidos son obligatorios.');
-  if (POSICIONES_VALIDAS.indexOf(posicionPrincipal) === -1) {
-    throw new Error('La posición principal debe ser DERECHA, REVÉS o AMBAS.');
-  }
-  if (posicionSecundaria && POSICIONES_VALIDAS.indexOf(posicionSecundaria) === -1) {
-    throw new Error('La posición secundaria debe ser DERECHA, REVÉS, AMBAS o estar vacía.');
-  }
+  validarPosiciones(posicionPrincipal, posicionSecundaria);
   if (isNaN(puntuacion) || puntuacion < 0) {
     throw new Error('La puntuación debe ser un número igual o mayor que 0.');
   }
@@ -139,12 +148,7 @@ function editarPerfilPropio(sesion, datos) {
 
   if (!nombre) throw new Error('El nombre es obligatorio.');
   if (!apellidos) throw new Error('Los apellidos son obligatorios.');
-  if (POSICIONES_VALIDAS.indexOf(posicionPrincipal) === -1) {
-    throw new Error('La posición principal debe ser DERECHA, REVÉS o AMBAS.');
-  }
-  if (posicionSecundaria && POSICIONES_VALIDAS.indexOf(posicionSecundaria) === -1) {
-    throw new Error('La posición secundaria debe ser DERECHA, REVÉS, AMBAS o estar vacía.');
-  }
+  validarPosiciones(posicionPrincipal, posicionSecundaria);
 
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
@@ -225,4 +229,37 @@ function obtenerOCrearTemporadaActual() {
   actualizarFila('CONFIG', 'clave', 'TEMPORADA_ACTUAL', { valor: idTemporada });
 
   return idTemporada;
+}
+
+/**
+ * Mantenimiento: se ejecuta UNA VEZ a mano desde el editor de Apps Script
+ * (seleccionar esta función y pulsar "Ejecutar") para corregir jugadores
+ * que tenían "AMBAS" guardado de cuando ese valor todavía existía. A partir
+ * de ahora solo hay Derecha/Revés, y quien juega los dos lados lo expresa
+ * con principal + secundaria (la contraria).
+ */
+function migrarPosicionesAmbas() {
+  var jugadores = leerFilas('JUGADORES');
+  var corregidos = 0;
+
+  jugadores.forEach(function (j) {
+    var principal = j.posicion_principal;
+    var secundaria = j.posicion_secundaria;
+    var cambios = null;
+
+    if (principal === 'AMBAS') {
+      cambios = { posicion_principal: 'DERECHA', posicion_secundaria: 'REVÉS' };
+    } else if (secundaria === 'AMBAS') {
+      var contraria = principal === 'DERECHA' ? 'REVÉS' : 'DERECHA';
+      cambios = { posicion_secundaria: contraria };
+    }
+
+    if (cambios) {
+      actualizarFila('JUGADORES', 'id_jugador', j.id_jugador, cambios);
+      corregidos++;
+    }
+  });
+
+  Logger.log('Jugadores corregidos: ' + corregidos);
+  return corregidos;
 }

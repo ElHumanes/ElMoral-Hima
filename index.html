@@ -316,16 +316,12 @@
             <option value="">Selecciona una posición</option>
             <option value="DERECHA">Derecha</option>
             <option value="REVÉS">Revés</option>
-            <option value="AMBAS">Ambas</option>
           </select>
 
-          <label class="etiqueta" for="perfil-posicion-secundaria">Posición secundaria (opcional)</label>
-          <select class="entrada" id="perfil-posicion-secundaria">
-            <option value="">Sin posición secundaria</option>
-            <option value="DERECHA">Derecha</option>
-            <option value="REVÉS">Revés</option>
-            <option value="AMBAS">Ambas</option>
-          </select>
+          <label class="fila-checkbox" for="perfil-posicion-secundaria-check">
+            <input type="checkbox" id="perfil-posicion-secundaria-check">
+            <span id="perfil-posicion-secundaria-texto">También juego en el otro lado</span>
+          </label>
 
           <p id="mensaje-error-perfil-editar" class="mensaje-error oculto"></p>
 
@@ -434,16 +430,12 @@
           <option value="">Selecciona una posición</option>
           <option value="DERECHA">Derecha</option>
           <option value="REVÉS">Revés</option>
-          <option value="AMBAS">Ambas</option>
         </select>
 
-        <label class="etiqueta" for="jugador-posicion-secundaria">Posición secundaria (opcional)</label>
-        <select class="entrada" id="jugador-posicion-secundaria">
-          <option value="">Sin posición secundaria</option>
-          <option value="DERECHA">Derecha</option>
-          <option value="REVÉS">Revés</option>
-          <option value="AMBAS">Ambas</option>
-        </select>
+        <label class="fila-checkbox" for="jugador-posicion-secundaria-check">
+          <input type="checkbox" id="jugador-posicion-secundaria-check">
+          <span id="jugador-posicion-secundaria-texto">También juega en el otro lado</span>
+        </label>
 
         <label class="etiqueta" for="jugador-puntuacion">Puntuación</label>
         <input class="entrada" type="number" id="jugador-puntuacion" min="0" step="0.01" value="0" required>

@@ -15,6 +15,25 @@ var POSICIONES_TEXTO = {
   AMBAS: 'Ambas'
 };
 
+/**
+ * Ya no existe "Ambas": quien juega los dos lados lo expresa con posición
+ * principal + secundaria (la contraria), marcada con una casilla en el
+ * formulario en lugar de un desplegable de tres opciones.
+ */
+function posicionContraria(p) {
+  if (p === 'DERECHA') return 'REVÉS';
+  if (p === 'REVÉS') return 'DERECHA';
+  return '';
+}
+
+function actualizarTextoPosicionSecundaria(idPrincipal, idTexto) {
+  var principal = document.getElementById(idPrincipal).value;
+  var contraria = posicionContraria(principal);
+  document.getElementById(idTexto).textContent = contraria
+    ? 'También juega de ' + POSICIONES_TEXTO[contraria].toLowerCase()
+    : 'También juega en el otro lado';
+}
+
 var COMPATIBILIDAD_TEXTO = {
   BUENA: '✓ Buena',
   REGULAR: '⚠ Regular',
@@ -57,6 +76,22 @@ function crearAvatarInicial(inicial, claseTamano) {
   return div;
 }
 
+/**
+ * Letra de posición para mostrar junto al nombre: D (derecha), R (revés) o
+ * D-R (juega en los dos lados). Vacío si no hay datos de posición (por
+ * ejemplo en tarjetas de resultados que no traen ese dato del jugador).
+ */
+function letraPosicion(jugador) {
+  if (!jugador || !jugador.posicion_principal) return '';
+  var jugables = posicionesJugablesCliente(jugador.posicion_principal, jugador.posicion_secundaria);
+  var puedeDerecha = jugables.indexOf('DERECHA') !== -1;
+  var puedeReves = jugables.indexOf('REVÉS') !== -1;
+  if (puedeDerecha && puedeReves) return 'D-R';
+  if (puedeDerecha) return 'D';
+  if (puedeReves) return 'R';
+  return '';
+}
+
 /** Construye el bloque "avatar + nombre1 + avatar + nombre2" que se repite en parejas y partidos. */
 function crearParJugadores(jugadorA, jugadorB) {
   var frag = document.createDocumentFragment();
@@ -64,6 +99,13 @@ function crearParJugadores(jugadorA, jugadorB) {
   var nombreA = document.createElement('span');
   nombreA.textContent = jugadorA.apodo || jugadorA.nombre_completo;
   frag.appendChild(nombreA);
+  var letraA = letraPosicion(jugadorA);
+  if (letraA) {
+    var insigniaA = document.createElement('span');
+    insigniaA.className = 'insignia insignia-posicion';
+    insigniaA.textContent = letraA;
+    frag.appendChild(insigniaA);
+  }
 
   var mas = document.createElement('span');
   mas.textContent = '+';
@@ -73,6 +115,13 @@ function crearParJugadores(jugadorA, jugadorB) {
   var nombreB = document.createElement('span');
   nombreB.textContent = jugadorB.apodo || jugadorB.nombre_completo;
   frag.appendChild(nombreB);
+  var letraB = letraPosicion(jugadorB);
+  if (letraB) {
+    var insigniaB = document.createElement('span');
+    insigniaB.className = 'insignia insignia-posicion';
+    insigniaB.textContent = letraB;
+    frag.appendChild(insigniaB);
+  }
 
   return frag;
 }
@@ -340,8 +389,13 @@ function abrirModalJugador(jugador) {
     document.getElementById('jugador-nombre').value = jugador.nombre;
     document.getElementById('jugador-apellidos').value = jugador.apellidos;
     document.getElementById('jugador-apodo').value = jugador.apodo || '';
-    document.getElementById('jugador-posicion-principal').value = jugador.posicion_principal;
-    document.getElementById('jugador-posicion-secundaria').value = jugador.posicion_secundaria || '';
+    // "AMBAS" ya no es válido, pero un jugador antiguo sin migrar puede
+    // seguir teniéndolo guardado: se trata como si jugara los dos lados.
+    var principal = jugador.posicion_principal === 'AMBAS' ? 'DERECHA' : jugador.posicion_principal;
+    var jugabaAmbas = jugador.posicion_principal === 'AMBAS' || jugador.posicion_secundaria === 'AMBAS' ||
+      (jugador.posicion_secundaria && jugador.posicion_secundaria !== principal);
+    document.getElementById('jugador-posicion-principal').value = principal;
+    document.getElementById('jugador-posicion-secundaria-check').checked = !!jugabaAmbas;
     document.getElementById('jugador-puntuacion').value = jugador.puntuacion;
   } else {
     titulo.textContent = 'Nuevo jugador';
@@ -349,6 +403,7 @@ function abrirModalJugador(jugador) {
     document.getElementById('jugador-puntuacion').value = 0;
   }
 
+  actualizarTextoPosicionSecundaria('jugador-posicion-principal', 'jugador-posicion-secundaria-texto');
   document.getElementById('modal-jugador').classList.remove('oculto');
 }
 
@@ -364,13 +419,16 @@ function manejarEnvioJugador(evento) {
   var botonGuardar = document.getElementById('boton-guardar-jugador');
   var mensajeError = document.getElementById('mensaje-error-jugador');
 
+  var posicionPrincipal = document.getElementById('jugador-posicion-principal').value;
+  var tieneSecundaria = document.getElementById('jugador-posicion-secundaria-check').checked;
+
   var datos = {
     token: guardada.token,
     nombre: document.getElementById('jugador-nombre').value.trim(),
     apellidos: document.getElementById('jugador-apellidos').value.trim(),
     apodo: document.getElementById('jugador-apodo').value.trim(),
-    posicion_principal: document.getElementById('jugador-posicion-principal').value,
-    posicion_secundaria: document.getElementById('jugador-posicion-secundaria').value,
+    posicion_principal: posicionPrincipal,
+    posicion_secundaria: tieneSecundaria ? posicionContraria(posicionPrincipal) : '',
     puntuacion: document.getElementById('jugador-puntuacion').value
   };
 
@@ -1115,13 +1173,16 @@ function irAVistaParejas(jornada) {
 function textoStatsJugador(jugador) {
   var posicion = (POSICIONES_TEXTO[jugador.posicion_principal] || jugador.posicion_principal || '') +
     (jugador.posicion_secundaria ? ' / ' + (POSICIONES_TEXTO[jugador.posicion_secundaria] || jugador.posicion_secundaria) : '');
+  var puntuacion = (jugador.puntuacion || jugador.puntuacion === 0)
+    ? Number(jugador.puntuacion) + ' pts'
+    : '';
   var record = jugador.partidos_jugados > 0
     ? jugador.victorias + 'V-' + (jugador.partidos_jugados - jugador.victorias) + 'D (' + jugador.porcentaje_victorias + '%)'
     : 'Sin partidos todavía';
   var asistencia = jugador.asistencia
     ? 'Asistencia ' + jugador.asistencia.porcentaje_asistencia + '%'
     : '';
-  return [posicion, record, asistencia].filter(Boolean).join(' · ');
+  return [posicion, puntuacion, record, asistencia].filter(Boolean).join(' · ');
 }
 
 function calcularCompatibilidadCliente(a, b) {
@@ -1202,7 +1263,7 @@ function manejarClicJugadorPareja(jugador) {
       '<p class="etiqueta-rol">Pareja propuesta</p>' +
       '<h3 class="titulo-bienvenida pareja-jugadores"></h3>' +
       '<p class="texto-secundario">Puntuación combinada: <strong></strong></p>' +
-      '<span class="insignia"></span>' +
+      '<span class="insignia insignia-compat-slot"></span>' +
       '<div class="modal-botones">' +
         '<button type="button" class="boton boton-secundario" id="boton-deshacer-pareja">Deshacer</button>' +
         '<button type="button" class="boton boton-exito" id="boton-anadir-pareja">Añadir pareja</button>' +
@@ -1210,7 +1271,10 @@ function manejarClicJugadorPareja(jugador) {
 
     previa.querySelector('.titulo-bienvenida').appendChild(crearParJugadores(a, b));
     previa.querySelector('strong').textContent = Number(a.puntuacion) + Number(b.puntuacion);
-    var insignia = previa.querySelector('.insignia');
+    // Selector específico: crearParJugadores también añade insignias con la
+    // clase "insignia" para las letras de posición (D/R/D-R), así que no
+    // vale con buscar ".insignia" a secas (cogería la primera, equivocada).
+    var insignia = previa.querySelector('.insignia-compat-slot');
     insignia.classList.add(COMPATIBILIDAD_CLASE[compat]);
     insignia.textContent = COMPATIBILIDAD_TEXTO[compat];
 
@@ -1245,24 +1309,44 @@ function pintarParejasFormadas() {
     return;
   }
 
+  // El backend asigna el número de partido (1 = más puntos, 5 = menos)
+  // según la puntuación combinada de cada pareja; se muestra aquí el mismo
+  // orden para que el capitán sepa de antemano qué partido le tocará a cada una.
+  var ordenadas = parejasFormadas.map(function (pareja, indiceOriginal) {
+    return { pareja: pareja, indiceOriginal: indiceOriginal, puntos: Number(pareja.a.puntuacion) + Number(pareja.b.puntuacion) };
+  }).sort(function (x, y) { return y.puntos - x.puntos; });
+
   contenedor.innerHTML = '';
-  parejasFormadas.forEach(function (pareja, indice) {
+  ordenadas.forEach(function (item, numeroPartido) {
+    var pareja = item.pareja;
     var tarjeta = document.createElement('div');
     tarjeta.className = 'jugador-tarjeta';
     tarjeta.innerHTML =
       '<div class="jugador-info">' +
         '<span class="jugador-nombre pareja-jugadores"></span>' +
-        '<div class="jugador-meta"><span class="insignia"></span></div>' +
+        '<div class="jugador-meta">' +
+          '<span class="insignia insignia-compat-slot"></span>' +
+          '<span class="insignia insignia-puntos"></span>' +
+        '</div>' +
       '</div>' +
       '<button type="button" class="boton-mini boton-mini-peligro">Quitar</button>';
-    tarjeta.querySelector('.jugador-nombre').appendChild(crearParJugadores(pareja.a, pareja.b));
-    var insignia = tarjeta.querySelector('.insignia');
+
+    var nombreSpan = tarjeta.querySelector('.jugador-nombre');
+    var numero = document.createElement('span');
+    numero.textContent = 'Partido ' + (numeroPartido + 1) + ': ';
+    nombreSpan.appendChild(numero);
+    nombreSpan.appendChild(crearParJugadores(pareja.a, pareja.b));
+
+    // Selector específico: crearParJugadores también añade insignias con la
+    // clase "insignia" para las letras de posición, no vale ".insignia" a secas.
+    var insignia = tarjeta.querySelector('.insignia-compat-slot');
     insignia.classList.add(COMPATIBILIDAD_CLASE[pareja.compat]);
     insignia.textContent = COMPATIBILIDAD_TEXTO[pareja.compat];
+    tarjeta.querySelector('.insignia-puntos').textContent = item.puntos + ' pts';
 
     tarjeta.querySelector('button').addEventListener('click', function () {
       parejasDisponibles.push(pareja.a, pareja.b);
-      parejasFormadas.splice(indice, 1);
+      parejasFormadas.splice(item.indiceOriginal, 1);
       pintarDisponiblesParejas();
       pintarParejasFormadas();
     });
@@ -1569,8 +1653,12 @@ function abrirEdicionPerfil() {
   document.getElementById('perfil-nombre').value = perfilActual.nombre;
   document.getElementById('perfil-apellidos').value = perfilActual.apellidos;
   document.getElementById('perfil-apodo').value = perfilActual.apodo || '';
-  document.getElementById('perfil-posicion-principal').value = perfilActual.posicion_principal;
-  document.getElementById('perfil-posicion-secundaria').value = perfilActual.posicion_secundaria || '';
+  var principal = perfilActual.posicion_principal === 'AMBAS' ? 'DERECHA' : perfilActual.posicion_principal;
+  var jugabaAmbas = perfilActual.posicion_principal === 'AMBAS' || perfilActual.posicion_secundaria === 'AMBAS' ||
+    (perfilActual.posicion_secundaria && perfilActual.posicion_secundaria !== principal);
+  document.getElementById('perfil-posicion-principal').value = principal;
+  document.getElementById('perfil-posicion-secundaria-check').checked = !!jugabaAmbas;
+  actualizarTextoPosicionSecundaria('perfil-posicion-principal', 'perfil-posicion-secundaria-texto');
   document.getElementById('mensaje-error-perfil-editar').classList.add('oculto');
 
   document.getElementById('boton-editar-perfil').classList.add('oculto');
@@ -1589,13 +1677,16 @@ function manejarGuardarPerfilPropio(evento) {
   var botonGuardar = document.getElementById('boton-guardar-perfil');
   var mensajeError = document.getElementById('mensaje-error-perfil-editar');
 
+  var posicionPrincipalPerfil = document.getElementById('perfil-posicion-principal').value;
+  var tieneSecundariaPerfil = document.getElementById('perfil-posicion-secundaria-check').checked;
+
   var datos = {
     token: guardada.token,
     nombre: document.getElementById('perfil-nombre').value.trim(),
     apellidos: document.getElementById('perfil-apellidos').value.trim(),
     apodo: document.getElementById('perfil-apodo').value.trim(),
-    posicion_principal: document.getElementById('perfil-posicion-principal').value,
-    posicion_secundaria: document.getElementById('perfil-posicion-secundaria').value
+    posicion_principal: posicionPrincipalPerfil,
+    posicion_secundaria: tieneSecundariaPerfil ? posicionContraria(posicionPrincipalPerfil) : ''
   };
 
   mensajeError.classList.add('oculto');
@@ -2176,6 +2267,12 @@ document.addEventListener('DOMContentLoaded', function () {
   });
   document.getElementById('boton-cancelar-jugador').addEventListener('click', cerrarModalJugador);
   document.getElementById('formulario-jugador').addEventListener('submit', manejarEnvioJugador);
+  document.getElementById('jugador-posicion-principal').addEventListener('change', function () {
+    actualizarTextoPosicionSecundaria('jugador-posicion-principal', 'jugador-posicion-secundaria-texto');
+  });
+  document.getElementById('perfil-posicion-principal').addEventListener('change', function () {
+    actualizarTextoPosicionSecundaria('perfil-posicion-principal', 'perfil-posicion-secundaria-texto');
+  });
 
   document.getElementById('boton-ir-usuarios').addEventListener('click', irAVistaUsuarios);
   document.getElementById('boton-volver-usuarios').addEventListener('click', function () {
