@@ -238,7 +238,8 @@ function obtenerOCrearTemporadaActual() {
  * de ahora solo hay Derecha/Revés, y quien juega los dos lados lo expresa
  * con principal + secundaria (la contraria).
  */
-function migrarPosicionesAmbas() {
+function migrarPosicionesAmbas(sesion) {
+  if (sesion) requerirCapitan(sesion);
   var jugadores = leerFilas('JUGADORES');
   var corregidos = 0;
 
