@@ -1694,9 +1694,15 @@ function cargarEstadisticasPerfil(idJugador) {
   var guardada = obtenerSesionGuardada();
   var contenedor = document.getElementById('tarjeta-perfil-estadisticas');
 
-  llamarApi('obtenerEstadisticasJugador', { token: guardada.token, id_jugador: idJugador }).then(function (resultado) {
+  Promise.all([
+    llamarApi('obtenerEstadisticasJugador', { token: guardada.token, id_jugador: idJugador }),
+    llamarApi('obtenerMiPosicionRanking', { token: guardada.token })
+  ]).then(function (resultados) {
+    var resultado = resultados[0];
+    var resultadoPosicion = resultados[1];
     if (!resultado.ok) return;
     var e = resultado.estadisticas;
+    var posicion = resultadoPosicion.ok ? resultadoPosicion.ranking : null;
 
     contenedor.classList.remove('oculto');
 
@@ -1708,6 +1714,7 @@ function cargarEstadisticasPerfil(idJugador) {
 
     contenedor.innerHTML =
       '<h3 class="titulo-seccion titulo-subseccion">Estadísticas</h3>' +
+      (posicion ? '<p class="texto-secundario">Puesto en el ranking del equipo: <strong>' + posicion.posicion + ' de ' + posicion.total_jugadores + '</strong></p>' : '') +
       '<p class="texto-secundario">Forma reciente (últimos ' + e.forma_reciente.length + '):</p>' +
       '<div class="fila-forma-reciente"></div>' +
       '<p class="texto-secundario">Partidos jugados: <strong>' + e.partidos_jugados + '</strong></p>' +
@@ -1716,15 +1723,26 @@ function cargarEstadisticasPerfil(idJugador) {
       '<p class="texto-secundario">Sets: <strong>' + e.sets_favor + '-' + e.sets_contra + '</strong> (diferencia ' + (e.diferencia_sets >= 0 ? '+' : '') + e.diferencia_sets + ')</p>' +
       '<p class="texto-secundario">Juegos: <strong>' + e.juegos_favor + '-' + e.juegos_contra + '</strong> (diferencia ' + (e.diferencia_juegos >= 0 ? '+' : '') + e.diferencia_juegos + ')</p>' +
       '<p class="texto-secundario">Como local: <strong>' + e.local.victorias + '/' + e.local.jugados + '</strong> · Como visitante: <strong>' + e.visitante.victorias + '/' + e.visitante.jugados + '</strong></p>' +
-      '<p class="texto-secundario">Asistencia: <strong>' + e.asistencia.porcentaje_asistencia + '%</strong> (' + e.asistencia.veces_apuntado + ' de ' + e.asistencia.convocatorias_totales + ' convocatorias) · Seleccionado <strong>' + e.asistencia.veces_seleccionado + '</strong> veces</p>';
+      '<p class="texto-secundario">Asistencia: <strong>' + e.asistencia.porcentaje_asistencia + '%</strong> (' + e.asistencia.veces_apuntado + ' de ' + e.asistencia.convocatorias_totales + ' convocatorias) · Seleccionado <strong>' + e.asistencia.veces_seleccionado + '</strong> veces</p>' +
+      '<p class="texto-secundario">Rendimiento por puesto de partido:</p>' +
+      '<div class="fila-forma-reciente fila-rendimiento-partido"></div>';
 
-    var filaForma = contenedor.querySelector('.fila-forma-reciente');
-    e.forma_reciente.forEach(function (resultado) {
+    var filaForma = contenedor.querySelector('.fila-forma-reciente:not(.fila-rendimiento-partido)');
+    e.forma_reciente.forEach(function (resultadoForma) {
       var chip = document.createElement('span');
-      chip.className = 'chip-forma ' + (resultado === 'G' ? 'chip-forma-g' : 'chip-forma-p');
-      chip.textContent = resultado;
+      chip.className = 'chip-forma ' + (resultadoForma === 'G' ? 'chip-forma-g' : 'chip-forma-p');
+      chip.textContent = resultadoForma;
       filaForma.appendChild(chip);
     });
+
+    var filaRendimiento = contenedor.querySelector('.fila-rendimiento-partido');
+    for (var n = 1; n <= 5; n++) {
+      var r = e.rendimiento_por_partido[n];
+      var insignia = document.createElement('span');
+      insignia.className = 'insignia insignia-posicion';
+      insignia.textContent = 'P' + n + ': ' + (r && r.jugados > 0 ? r.victorias + '/' + r.jugados : 'sin datos');
+      filaRendimiento.appendChild(insignia);
+    }
   });
 }
 
@@ -1829,6 +1847,89 @@ function irAVistaJornadaLectura(jornada) {
       contenedor.appendChild(tarjeta);
     });
   });
+}
+
+/* ==========================================================================
+ * RESULTADOS (jugador) — todos los partidos jugados en un único sitio,
+ * sin tener que entrar convocatoria por convocatoria. Dos pestañas: los del
+ * equipo entero, o solo los propios.
+ * ======================================================================= */
+
+var resultadosCache = [];
+var resultadosModoActual = 'EQUIPO';
+
+function irAVistaResultados() {
+  mostrarVista('vista-resultados');
+  cargarResultados('EQUIPO');
+}
+
+function cargarResultados(modo) {
+  resultadosModoActual = modo;
+  document.getElementById('boton-resultados-equipo').className = 'boton ' + (modo === 'EQUIPO' ? 'boton-primario' : 'boton-secundario');
+  document.getElementById('boton-resultados-mios').className = 'boton ' + (modo === 'MIOS' ? 'boton-primario' : 'boton-secundario');
+
+  var contenedor = document.getElementById('lista-resultados');
+  contenedor.innerHTML = '<p class="texto-vacio">Cargando...</p>';
+
+  var guardada = obtenerSesionGuardada();
+  llamarApi('listarResultados', { token: guardada.token }).then(function (resultado) {
+    if (!resultado.ok) {
+      contenedor.innerHTML = '<p class="texto-vacio">' + (resultado.error || 'No se han podido cargar los resultados.') + '</p>';
+      return;
+    }
+    resultadosCache = resultado.resultados;
+    pintarResultados();
+  });
+}
+
+function cambiarModoResultados(modo) {
+  resultadosModoActual = modo;
+  document.getElementById('boton-resultados-equipo').className = 'boton ' + (modo === 'EQUIPO' ? 'boton-primario' : 'boton-secundario');
+  document.getElementById('boton-resultados-mios').className = 'boton ' + (modo === 'MIOS' ? 'boton-primario' : 'boton-secundario');
+  pintarResultados();
+}
+
+function pintarResultados() {
+  var contenedor = document.getElementById('lista-resultados');
+  var guardada = obtenerSesionGuardada();
+
+  var lista = resultadosModoActual === 'MIOS'
+    ? resultadosCache.filter(function (r) {
+        return r.jugador_a.id_jugador === guardada.id_jugador || r.jugador_b.id_jugador === guardada.id_jugador;
+      })
+    : resultadosCache;
+
+  if (lista.length === 0) {
+    contenedor.innerHTML = resultadosModoActual === 'MIOS'
+      ? '<p class="texto-vacio">Todavía no has jugado ningún partido.</p>'
+      : '<p class="texto-vacio">Todavía no hay ningún resultado registrado.</p>';
+    return;
+  }
+
+  contenedor.innerHTML = '';
+  lista.forEach(function (r) {
+    contenedor.appendChild(crearTarjetaResultado(r));
+  });
+}
+
+function crearTarjetaResultado(r) {
+  var tarjeta = document.createElement('div');
+  tarjeta.className = 'partido-tarjeta';
+  tarjeta.innerHTML =
+    '<div class="partido-info">' +
+      '<span class="partido-numero"></span>' +
+      '<span class="partido-jugadores"></span>' +
+      '<span class="partido-marcador"></span>' +
+    '</div>';
+
+  tarjeta.querySelector('.partido-numero').textContent =
+    (r.jornada.local_visitante === 'LOCAL' ? 'vs ' : '@ ') + r.jornada.rival + ' · ' + formatearFecha(r.jornada.fecha) + ' · Partido ' + r.numero_partido;
+  tarjeta.querySelector('.partido-jugadores').appendChild(crearParJugadores(r.jugador_a, r.jugador_b));
+  tarjeta.querySelector('.partido-marcador').textContent =
+    (r.resultado === 'GANADO' ? '✅ Ganado' : '❌ Perdido') + ' · Sets ' + r.sets_favor + '-' + r.sets_contra +
+    (r.juegos_favor || r.juegos_contra ? ' · Juegos ' + r.juegos_favor + '-' + r.juegos_contra : '');
+
+  return tarjeta;
 }
 
 /* ==========================================================================
@@ -2019,6 +2120,17 @@ document.addEventListener('DOMContentLoaded', function () {
     mostrarVista('vista-inicio');
   });
   document.getElementById('boton-volver-jornada-lectura').addEventListener('click', irAVistaCalendario);
+
+  document.getElementById('boton-ir-resultados').addEventListener('click', irAVistaResultados);
+  document.getElementById('boton-volver-resultados').addEventListener('click', function () {
+    mostrarVista('vista-inicio');
+  });
+  document.getElementById('boton-resultados-equipo').addEventListener('click', function () {
+    cambiarModoResultados('EQUIPO');
+  });
+  document.getElementById('boton-resultados-mios').addEventListener('click', function () {
+    cambiarModoResultados('MIOS');
+  });
 
   document.getElementById('boton-ir-dashboard').addEventListener('click', irAVistaDashboard);
   document.getElementById('boton-volver-dashboard').addEventListener('click', function () {

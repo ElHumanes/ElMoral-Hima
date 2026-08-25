@@ -99,6 +99,10 @@
           <span class="tarjeta-menu-icono">📅</span>
           <span class="tarjeta-menu-texto">Calendario</span>
         </button>
+        <button class="tarjeta-menu" id="boton-ir-resultados">
+          <span class="tarjeta-menu-icono">🎾</span>
+          <span class="tarjeta-menu-texto">Resultados</span>
+        </button>
       </div>
 
       <div id="tarjeta-convocatoria-jugador" class="tarjeta oculto">
@@ -354,6 +358,21 @@
         <h3 class="titulo-seccion titulo-subseccion">🎾 Parejas y resultados</h3>
         <div id="lectura-lista-partidos" class="lista-jugadores"></div>
       </div>
+    </section>
+
+    <!-- VISTA: RESULTADOS (jugador) — todos los partidos jugados, sin tener que entrar jornada por jornada -->
+    <section id="vista-resultados" class="vista oculto">
+      <div class="cabecera-seccion">
+        <button class="boton-volver" id="boton-volver-resultados">← Volver</button>
+        <h1 class="titulo-seccion">Resultados</h1>
+      </div>
+
+      <div class="modal-botones">
+        <button type="button" class="boton boton-primario" id="boton-resultados-equipo">Equipo</button>
+        <button type="button" class="boton boton-secundario" id="boton-resultados-mios">Mis partidos</button>
+      </div>
+
+      <div id="lista-resultados" class="lista-jugadores"></div>
     </section>
 
   </main>
