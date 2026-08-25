@@ -86,6 +86,41 @@ function responderConvocatoria(sesion, idJornada, disponibilidad, observaciones)
   return { ok: true };
 }
 
+/**
+ * Historial de convocatorias del propio jugador: para cada jornada cuya
+ * convocatoria ya está cerrada o en un estado posterior, su respuesta
+ * (ME_APUNTO / NO_PUEDO / NO_RESPONDIO si no llegó a contestar). No incluye
+ * jornadas sin convocatoria todavía ni con la convocatoria abierta (esa se
+ * responde desde la pantalla de inicio, no tiene sentido en un historial).
+ */
+function listarHistorialConvocatoriasJugador(sesion) {
+  if (!sesion.id_jugador) {
+    throw new Error('Tu usuario no tiene una ficha de jugador asociada. Habla con el capitán.');
+  }
+
+  var jornadas = leerFilas('JORNADAS').filter(function (j) {
+    return j.estado !== 'PENDIENTE' && j.estado !== 'CONVOCATORIA_ABIERTA';
+  });
+
+  var respuestaPorJornada = {};
+  leerFilas('CONVOCATORIAS')
+    .filter(function (c) { return c.id_jugador === sesion.id_jugador; })
+    .forEach(function (r) { respuestaPorJornada[r.id_jornada] = r; });
+
+  return jornadas.map(function (j) {
+    var respuesta = respuestaPorJornada[j.id_jornada];
+    return {
+      id_jornada: j.id_jornada,
+      rival: j.rival,
+      fecha: j.fecha,
+      lugar: j.lugar,
+      local_visitante: j.local_visitante,
+      estado_jornada: j.estado,
+      disponibilidad: respuesta ? respuesta.disponibilidad : 'NO_RESPONDIO'
+    };
+  }).sort(function (a, b) { return String(b.fecha).localeCompare(String(a.fecha)); });
+}
+
 /* ========================================================================
  * FUNCIÓN DE PRUEBA — se ejecuta a mano UNA VEZ desde el editor de Apps
  * Script para poder probar cómo responde un jugador a una convocatoria.
@@ -107,8 +142,8 @@ function crearUsuarioJugadorPrueba() {
     return;
   }
 
-  var nombreUsuario = 'CAMBIA_ESTO';
-  var codigoAcceso = 'CAMBIA_ESTO';
+  var nombreUsuario = 'mari';
+  var codigoAcceso = '1111';
 
   agregarFila('USUARIOS', {
     id_usuario: generarId(),

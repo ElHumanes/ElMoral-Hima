@@ -187,6 +187,11 @@ function mostrarInicio(datosUsuario) {
   if (datosUsuario.rol === 'JUGADOR') {
     comprobarConvocatoriaAbiertaParaJugador();
   }
+
+  document.getElementById('tarjeta-convocatoria-capitan').classList.add('oculto');
+  if (datosUsuario.rol === 'CAPITAN') {
+    comprobarConvocatoriaAbiertaParaCapitan();
+  }
 }
 
 /** Comprueba al cargar la página si ya había una sesión guardada y sigue siendo válida. */
@@ -1675,6 +1680,58 @@ function responderConvocatoria(idJornada, disponibilidad) {
 }
 
 /* ==========================================================================
+ * CONVOCATORIA — resumen para el capitán (pantalla de inicio)
+ * ======================================================================= */
+
+function comprobarConvocatoriaAbiertaParaCapitan() {
+  var guardada = obtenerSesionGuardada();
+  var tarjeta = document.getElementById('tarjeta-convocatoria-capitan');
+  var contenedor = document.getElementById('lista-convocatoria-capitan');
+
+  llamarApi('listarJornadas', { token: guardada.token }).then(function (resultado) {
+    if (!resultado.ok) return;
+
+    var abiertas = resultado.jornadas.filter(function (j) { return j.estado === 'CONVOCATORIA_ABIERTA'; });
+    if (abiertas.length === 0) {
+      tarjeta.classList.add('oculto');
+      return;
+    }
+
+    tarjeta.classList.remove('oculto');
+    contenedor.innerHTML = '<p class="texto-vacio">Cargando...</p>';
+
+    Promise.all(abiertas.map(function (jornada) {
+      return llamarApi('listarConvocatoria', { token: guardada.token, id_jornada: jornada.id_jornada })
+        .then(function (r) { return { jornada: jornada, convocatoria: r.ok ? r.convocatoria : [] }; });
+    })).then(function (resultados) {
+      contenedor.innerHTML = '';
+      resultados.forEach(function (item) {
+        var apuntados = item.convocatoria.filter(function (c) { return c.disponibilidad === 'ME_APUNTO'; }).length;
+        var noDisponibles = item.convocatoria.filter(function (c) { return c.disponibilidad === 'NO_PUEDO'; }).length;
+        var pendientes = item.convocatoria.filter(function (c) { return c.disponibilidad === 'PENDIENTE'; }).length;
+
+        var fila = document.createElement('div');
+        fila.className = 'jornada-tarjeta';
+        fila.innerHTML =
+          '<div class="jornada-info">' +
+            '<span class="jornada-rival"></span>' +
+            '<span class="jornada-meta"></span>' +
+          '</div>' +
+          '<span class="insignia insignia-posicion">Ver</span>';
+        fila.querySelector('.jornada-rival').textContent =
+          (item.jornada.local_visitante === 'LOCAL' ? 'vs ' : '@ ') + item.jornada.rival;
+        fila.querySelector('.jornada-meta').textContent =
+          formatearFecha(item.jornada.fecha) + ' · ✅ ' + apuntados + ' · ❌ ' + noDisponibles + ' · ⏳ ' + pendientes;
+        fila.addEventListener('click', function () {
+          abrirDetalleJornada(item.jornada);
+        });
+        contenedor.appendChild(fila);
+      });
+    });
+  });
+}
+
+/* ==========================================================================
  * MI PERFIL (jugador)
  * ======================================================================= */
 
@@ -1944,13 +2001,24 @@ function cargarCalendario() {
   contenedor.innerHTML = '<p class="texto-vacio">Cargando...</p>';
 
   llamarApi('listarJornadas', { token: guardada.token }).then(function (resultado) {
-    if (!resultado.ok || resultado.jornadas.length === 0) {
-      contenedor.innerHTML = '<p class="texto-vacio">Todavía no hay jornadas programadas.</p>';
+    if (!resultado.ok) {
+      contenedor.innerHTML = '<p class="texto-vacio">' + (resultado.error || 'No se han podido cargar las jornadas.') + '</p>';
+      return;
+    }
+
+    // El calendario es solo para ver lo que queda por jugar: las jornadas ya
+    // finalizadas se consultan desde Resultados o el Historial de convocatorias.
+    var proximas = resultado.jornadas
+      .filter(function (j) { return j.estado !== 'FINALIZADA'; })
+      .sort(function (a, b) { return String(a.fecha).localeCompare(String(b.fecha)); });
+
+    if (proximas.length === 0) {
+      contenedor.innerHTML = '<p class="texto-vacio">No hay próximos partidos programados.</p>';
       return;
     }
 
     contenedor.innerHTML = '';
-    resultado.jornadas.forEach(function (jornada) {
+    proximas.forEach(function (jornada) {
       var fila = document.createElement('div');
       fila.className = 'jornada-tarjeta';
       fila.innerHTML =
@@ -1967,6 +2035,65 @@ function cargarCalendario() {
       fila.addEventListener('click', function () {
         irAVistaJornadaLectura(jornada);
       });
+      contenedor.appendChild(fila);
+    });
+  });
+}
+
+/* ==========================================================================
+ * HISTORIAL DE CONVOCATORIAS (jugador) — convocatorias ya cerradas y si el
+ * jugador se apuntó o no a cada una, de forma clara y visual.
+ * ======================================================================= */
+
+var DISPONIBILIDAD_HISTORIAL_TEXTO = {
+  ME_APUNTO: '✅ Me apunto',
+  NO_PUEDO: '❌ No puedo',
+  NO_RESPONDIO: '⚪ No respondiste'
+};
+
+var DISPONIBILIDAD_HISTORIAL_CLASE = {
+  ME_APUNTO: 'insignia-activo',
+  NO_PUEDO: 'insignia-inactivo',
+  NO_RESPONDIO: 'insignia-posicion'
+};
+
+function irAVistaHistorialConvocatorias() {
+  mostrarVista('vista-historial-convocatorias');
+  cargarHistorialConvocatorias();
+}
+
+function cargarHistorialConvocatorias() {
+  var guardada = obtenerSesionGuardada();
+  var contenedor = document.getElementById('lista-historial-convocatorias');
+  contenedor.innerHTML = '<p class="texto-vacio">Cargando...</p>';
+
+  llamarApi('listarHistorialConvocatorias', { token: guardada.token }).then(function (resultado) {
+    if (!resultado.ok) {
+      contenedor.innerHTML = '<p class="texto-vacio">' + (resultado.error || 'No se ha podido cargar el historial.') + '</p>';
+      return;
+    }
+    if (resultado.historial.length === 0) {
+      contenedor.innerHTML = '<p class="texto-vacio">Todavía no hay convocatorias cerradas.</p>';
+      return;
+    }
+
+    contenedor.innerHTML = '';
+    resultado.historial.forEach(function (h) {
+      var fila = document.createElement('div');
+      fila.className = 'jornada-tarjeta';
+      fila.innerHTML =
+        '<div class="jornada-info">' +
+          '<span class="jornada-rival"></span>' +
+          '<span class="jornada-meta"></span>' +
+          '<span class="insignia"></span>' +
+        '</div>';
+      fila.querySelector('.jornada-rival').textContent =
+        (h.local_visitante === 'LOCAL' ? 'vs ' : '@ ') + h.rival;
+      fila.querySelector('.jornada-meta').textContent =
+        formatearFecha(h.fecha) + (h.lugar ? ' · ' + h.lugar : '');
+      var insignia = fila.querySelector('.insignia');
+      insignia.classList.add(DISPONIBILIDAD_HISTORIAL_CLASE[h.disponibilidad] || 'insignia-posicion');
+      insignia.textContent = DISPONIBILIDAD_HISTORIAL_TEXTO[h.disponibilidad] || h.disponibilidad;
       contenedor.appendChild(fila);
     });
   });
@@ -2089,9 +2216,39 @@ function pintarResultados() {
     return;
   }
 
+  // Se agrupan visualmente los partidos del mismo enfrentamiento (misma
+  // jornada) para que se vea de un vistazo qué cinco partidos van juntos.
   contenedor.innerHTML = '';
+  var idJornadaAnterior = null;
+  var grupoActual = null;
+  var indiceGrupo = -1;
+
   lista.forEach(function (r) {
-    contenedor.appendChild(crearTarjetaResultado(r));
+    if (r.id_jornada !== idJornadaAnterior) {
+      idJornadaAnterior = r.id_jornada;
+      indiceGrupo++;
+
+      var partidosDeEstaJornada = lista.filter(function (x) { return x.id_jornada === r.id_jornada; });
+      var ganados = partidosDeEstaJornada.filter(function (x) { return x.resultado === 'GANADO'; }).length;
+
+      var cabecera = document.createElement('div');
+      cabecera.className = 'cabecera-grupo-resultados';
+      cabecera.innerHTML =
+        '<span class="grupo-resultados-rival"></span>' +
+        '<span class="insignia"></span>';
+      cabecera.querySelector('.grupo-resultados-rival').textContent =
+        (r.jornada.local_visitante === 'LOCAL' ? 'vs ' : '@ ') + r.jornada.rival + ' · ' + formatearFecha(r.jornada.fecha);
+      var insigniaCabecera = cabecera.querySelector('.insignia');
+      insigniaCabecera.classList.add(ganados >= 3 ? 'insignia-compat-buena' : 'insignia-compat-mala');
+      insigniaCabecera.textContent = ganados + 'V - ' + (partidosDeEstaJornada.length - ganados) + 'D';
+      contenedor.appendChild(cabecera);
+
+      grupoActual = document.createElement('div');
+      grupoActual.className = 'grupo-resultados-jornada ' + (indiceGrupo % 2 === 0 ? 'grupo-resultados-par' : 'grupo-resultados-impar');
+      contenedor.appendChild(grupoActual);
+    }
+
+    grupoActual.appendChild(crearTarjetaResultado(r));
   });
 }
 
@@ -2105,8 +2262,7 @@ function crearTarjetaResultado(r) {
       '<span class="partido-marcador"></span>' +
     '</div>';
 
-  tarjeta.querySelector('.partido-numero').textContent =
-    (r.jornada.local_visitante === 'LOCAL' ? 'vs ' : '@ ') + r.jornada.rival + ' · ' + formatearFecha(r.jornada.fecha) + ' · Partido ' + r.numero_partido;
+  tarjeta.querySelector('.partido-numero').textContent = 'Partido ' + r.numero_partido;
   tarjeta.querySelector('.partido-jugadores').appendChild(crearParJugadores(r.jugador_a, r.jugador_b));
   tarjeta.querySelector('.partido-marcador').textContent =
     (r.resultado === 'GANADO' ? '✅ Ganado' : '❌ Perdido') + ' · Sets ' + r.sets_favor + '-' + r.sets_contra +
@@ -2134,27 +2290,45 @@ function irAVistaEstadisticasJugador() {
  * y el resultado (victorias-derrotas) de cada jornada ya jugada.
  * ======================================================================= */
 
+var clasificacionModoActual = 'EQUIPO';
+
 function irAVistaClasificacion() {
   mostrarVista('vista-clasificacion');
+  cambiarModoClasificacion('EQUIPO');
   cargarClasificacion();
+}
+
+function cambiarModoClasificacion(modo) {
+  clasificacionModoActual = modo;
+  document.getElementById('boton-clasificacion-equipo').className = 'boton ' + (modo === 'EQUIPO' ? 'boton-primario' : 'boton-secundario');
+  document.getElementById('boton-clasificacion-ranking').className = 'boton ' + (modo === 'RANKING' ? 'boton-primario' : 'boton-secundario');
+  document.getElementById('panel-clasificacion-equipo').classList.toggle('oculto', modo !== 'EQUIPO');
+  document.getElementById('panel-clasificacion-ranking').classList.toggle('oculto', modo !== 'RANKING');
 }
 
 function cargarClasificacion() {
   var guardada = obtenerSesionGuardada();
+  var resumenEquipo = document.getElementById('resumen-clasificacion-equipo');
+  var listaJornadas = document.getElementById('clasificacion-equipo-jornadas');
   var listaRanking = document.getElementById('clasificacion-ranking-jugadores');
   var listaParejas = document.getElementById('clasificacion-ranking-parejas');
-  var listaJornadas = document.getElementById('clasificacion-resumen-jornadas');
+  resumenEquipo.innerHTML = '<p class="texto-vacio">Cargando...</p>';
+  listaJornadas.innerHTML = '';
   listaRanking.innerHTML = '<p class="texto-vacio">Cargando...</p>';
   listaParejas.innerHTML = '<p class="texto-vacio">Cargando...</p>';
-  listaJornadas.innerHTML = '<p class="texto-vacio">Cargando...</p>';
 
   Promise.all([
+    llamarApi('obtenerClasificacionEquipo', { token: guardada.token }),
     llamarApi('listarRankingJugadores', { token: guardada.token }),
-    llamarApi('listarEstadisticasParejas', { token: guardada.token }),
-    llamarApi('listarResumenJornadas', { token: guardada.token })
+    llamarApi('listarEstadisticasParejas', { token: guardada.token })
   ]).then(function (respuestas) {
-    var ranking = respuestas[0], parejas = respuestas[1], resumen = respuestas[2];
+    var equipo = respuestas[0], ranking = respuestas[1], parejas = respuestas[2];
 
+    if (equipo.ok) {
+      pintarClasificacionEquipo(equipo.clasificacion);
+    } else {
+      resumenEquipo.innerHTML = '<p class="texto-vacio">' + (equipo.error || 'No se ha podido cargar.') + '</p>';
+    }
     if (ranking.ok) {
       pintarRankingJugadores(ranking.ranking, 'clasificacion-ranking-jugadores');
     } else {
@@ -2165,29 +2339,36 @@ function cargarClasificacion() {
     } else {
       listaParejas.innerHTML = '<p class="texto-vacio">' + (parejas.error || 'No se ha podido cargar.') + '</p>';
     }
-    if (resumen.ok) {
-      pintarResumenJornadas(resumen.resumen);
-    } else {
-      listaJornadas.innerHTML = '<p class="texto-vacio">' + (resumen.error || 'No se ha podido cargar.') + '</p>';
-    }
   }).catch(function () {
     var mensaje = '<p class="texto-vacio">No se ha podido conectar con el servidor.</p>';
+    resumenEquipo.innerHTML = mensaje;
     listaRanking.innerHTML = mensaje;
     listaParejas.innerHTML = mensaje;
-    listaJornadas.innerHTML = mensaje;
   });
 }
 
-function pintarResumenJornadas(resumen) {
-  var contenedor = document.getElementById('clasificacion-resumen-jornadas');
+/**
+ * Clasificación del equipo según el reglamento de la SNP: 12 puntos en
+ * juego por enfrentamiento (parejas 1 y 2 valen 3 puntos, 3/4/5 valen 2),
+ * y se gana el enfrentamiento ganando al menos 3 de los 5 partidos.
+ */
+function pintarClasificacionEquipo(clasificacion) {
+  var resumen = document.getElementById('resumen-clasificacion-equipo');
 
-  if (resumen.length === 0) {
-    contenedor.innerHTML = '<p class="texto-vacio">Todavía no hay ninguna jornada jugada.</p>';
+  if (clasificacion.encuentros_jugados === 0) {
+    resumen.innerHTML = '<p class="texto-vacio">Todavía no hay ningún enfrentamiento completo.</p>';
+    document.getElementById('clasificacion-equipo-jornadas').innerHTML = '';
     return;
   }
 
+  resumen.innerHTML =
+    '<p class="etiqueta-rol">Balance de la liga</p>' +
+    '<h2 class="titulo-bienvenida">' + clasificacion.encuentros_ganados + 'V - ' + clasificacion.encuentros_perdidos + 'D</h2>' +
+    '<p class="texto-secundario">' + clasificacion.puntos_totales + ' de ' + clasificacion.puntos_posibles + ' puntos posibles (' + clasificacion.encuentros_jugados + ' enfrentamientos jugados)</p>';
+
+  var contenedor = document.getElementById('clasificacion-equipo-jornadas');
   contenedor.innerHTML = '';
-  resumen.forEach(function (r) {
+  clasificacion.por_jornada.forEach(function (r) {
     var fila = document.createElement('div');
     fila.className = 'jornada-tarjeta';
     fila.innerHTML =
@@ -2197,10 +2378,11 @@ function pintarResumenJornadas(resumen) {
         '<span class="insignia"></span>' +
       '</div>';
     fila.querySelector('.jornada-rival').textContent = (r.local_visitante === 'LOCAL' ? 'vs ' : '@ ') + r.rival;
-    fila.querySelector('.jornada-meta').textContent = formatearFecha(r.fecha) + ' · ' + r.partidos_jugados + ' partidos jugados';
+    fila.querySelector('.jornada-meta').textContent =
+      formatearFecha(r.fecha) + ' · ' + r.partidos_ganados + 'V - ' + r.partidos_perdidos + 'D · ' + r.puntos + ' pts';
     var insignia = fila.querySelector('.insignia');
-    insignia.className = 'insignia ' + (r.victorias >= r.derrotas ? 'insignia-compat-buena' : 'insignia-compat-mala');
-    insignia.textContent = r.victorias + 'V - ' + r.derrotas + 'D';
+    insignia.className = 'insignia ' + (r.ganado ? 'insignia-compat-buena' : 'insignia-compat-mala');
+    insignia.textContent = r.ganado ? 'Ganado' : 'Perdido';
     contenedor.appendChild(fila);
   });
 }
@@ -2418,6 +2600,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
   document.getElementById('boton-ir-clasificacion').addEventListener('click', irAVistaClasificacion);
   document.getElementById('boton-volver-clasificacion').addEventListener('click', function () {
+    mostrarVista('vista-inicio');
+  });
+  document.getElementById('boton-clasificacion-equipo').addEventListener('click', function () {
+    cambiarModoClasificacion('EQUIPO');
+  });
+  document.getElementById('boton-clasificacion-ranking').addEventListener('click', function () {
+    cambiarModoClasificacion('RANKING');
+  });
+
+  document.getElementById('boton-ir-historial-convocatorias').addEventListener('click', irAVistaHistorialConvocatorias);
+  document.getElementById('boton-volver-historial-convocatorias').addEventListener('click', function () {
     mostrarVista('vista-inicio');
   });
 

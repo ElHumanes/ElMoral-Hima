@@ -70,6 +70,9 @@ function manejarPeticion(e) {
       case 'responderConvocatoria':
         return respuestaJson(responderConvocatoria(requerirSesionValida(params.token), params.id_jornada, params.disponibilidad, params.observaciones));
 
+      case 'listarHistorialConvocatorias':
+        return respuestaOk({ historial: listarHistorialConvocatoriasJugador(requerirSesionValida(params.token)) });
+
       case 'listarSeleccionados':
         if (!validarSesion(params.token)) return respuestaError('Sesión no válida o caducada.');
         return respuestaOk({ seleccionados: listarSeleccionados(params.id_jornada) });
@@ -124,6 +127,10 @@ function manejarPeticion(e) {
       case 'listarResumenJornadas':
         if (!validarSesion(params.token)) return respuestaError('Sesión no válida o caducada.');
         return respuestaOk({ resumen: listarResumenJornadas() });
+
+      case 'obtenerClasificacionEquipo':
+        if (!validarSesion(params.token)) return respuestaError('Sesión no válida o caducada.');
+        return respuestaOk({ clasificacion: obtenerClasificacionEquipo() });
 
       case 'obtenerDashboard':
         return respuestaOk({ dashboard: obtenerDashboard(requerirSesionValida(params.token)) });

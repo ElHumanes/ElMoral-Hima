@@ -90,6 +90,11 @@
         </button>
       </div>
 
+      <div id="tarjeta-convocatoria-capitan" class="oculto">
+        <h3 class="titulo-seccion titulo-subseccion" style="margin-top:0">📋 Convocatorias abiertas</h3>
+        <div id="lista-convocatoria-capitan" class="lista-jugadores"></div>
+      </div>
+
       <div id="menu-jugador" class="menu-tarjetas oculto">
         <button class="tarjeta-menu" id="boton-ir-perfil">
           <span class="tarjeta-menu-icono">🙋</span>
@@ -110,6 +115,10 @@
         <button class="tarjeta-menu" id="boton-ir-clasificacion">
           <span class="tarjeta-menu-icono">🏆</span>
           <span class="tarjeta-menu-texto">Clasificación</span>
+        </button>
+        <button class="tarjeta-menu" id="boton-ir-historial-convocatorias">
+          <span class="tarjeta-menu-icono">📋</span>
+          <span class="tarjeta-menu-texto">Convocatorias</span>
         </button>
       </div>
 
@@ -391,21 +400,43 @@
       <div id="tarjeta-estadisticas-jugador" class="tarjeta"></div>
     </section>
 
-    <!-- VISTA: CLASIFICACIÓN (jugador) — ranking del equipo y resultado de cada jornada -->
+    <!-- VISTA: CLASIFICACIÓN (jugador) — clasificación del equipo en la liga (SNP) y ranking interno -->
     <section id="vista-clasificacion" class="vista oculto">
       <div class="cabecera-seccion">
         <button class="boton-volver" id="boton-volver-clasificacion">← Volver</button>
         <h1 class="titulo-seccion">Clasificación</h1>
       </div>
 
-      <h3 class="titulo-seccion titulo-subseccion" style="margin-top:0">🏅 Ranking de jugadores</h3>
-      <div id="clasificacion-ranking-jugadores" class="lista-jugadores"></div>
+      <div class="modal-botones">
+        <button type="button" class="boton boton-primario" id="boton-clasificacion-equipo">Clasificación del Equipo</button>
+        <button type="button" class="boton boton-secundario" id="boton-clasificacion-ranking">Ranking</button>
+      </div>
 
-      <h3 class="titulo-seccion titulo-subseccion">🤝 Ranking de parejas</h3>
-      <div id="clasificacion-ranking-parejas" class="lista-jugadores"></div>
+      <div id="panel-clasificacion-equipo">
+        <div id="resumen-clasificacion-equipo" class="tarjeta"></div>
+        <h3 class="titulo-seccion titulo-subseccion">📅 Por jornada</h3>
+        <div id="clasificacion-equipo-jornadas" class="lista-jugadores"></div>
+      </div>
 
-      <h3 class="titulo-seccion titulo-subseccion">📅 Resultado por jornada</h3>
-      <div id="clasificacion-resumen-jornadas" class="lista-jugadores"></div>
+      <div id="panel-clasificacion-ranking" class="oculto">
+        <h3 class="titulo-seccion titulo-subseccion" style="margin-top:0">🏅 Ranking de jugadores</h3>
+        <div id="clasificacion-ranking-jugadores" class="lista-jugadores"></div>
+
+        <h3 class="titulo-seccion titulo-subseccion">🤝 Ranking de parejas</h3>
+        <div id="clasificacion-ranking-parejas" class="lista-jugadores"></div>
+      </div>
+    </section>
+
+    <!-- VISTA: HISTORIAL DE CONVOCATORIAS (jugador) -->
+    <section id="vista-historial-convocatorias" class="vista oculto">
+      <div class="cabecera-seccion">
+        <button class="boton-volver" id="boton-volver-historial-convocatorias">← Volver</button>
+        <h1 class="titulo-seccion">Historial de convocatorias</h1>
+      </div>
+
+      <p class="texto-secundario">Convocatorias ya cerradas y si te apuntaste a cada una.</p>
+
+      <div id="lista-historial-convocatorias" class="lista-jugadores"></div>
     </section>
 
   </main>

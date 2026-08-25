@@ -865,6 +865,37 @@ select.entrada {
   color: var(--color-text-muted);
 }
 
+/* Agrupación visual de los 5 partidos de un mismo enfrentamiento en Resultados */
+.cabecera-grupo-resultados {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 4px;
+}
+
+.grupo-resultados-rival {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.grupo-resultados-jornada {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 14px;
+}
+
+.grupo-resultados-par {
+  background: rgba(37, 99, 235, 0.05);
+  border: 1px solid rgba(37, 99, 235, 0.15);
+}
+
+.grupo-resultados-impar {
+  background: rgba(22, 163, 74, 0.05);
+  border: 1px solid rgba(22, 163, 74, 0.15);
+}
+
 /* Avatares de jugador (foto de perfil o inicial de su nombre) */
 .avatar {
   border-radius: 50%;

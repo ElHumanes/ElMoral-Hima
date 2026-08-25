@@ -210,10 +210,39 @@ function calcularEstadisticasBatch(idsJugadores) {
   return resultado;
 }
 
-/** Ranking de todos los jugadores activos, de mayor a menor % de victorias. Solo capitán. */
+/**
+ * Ranking de todos los jugadores activos, de mayor a menor % de victorias.
+ * Cualquier persona con sesión válida puede verlo (jugador o capitán) — es
+ * la clasificación del equipo, no un dato de gestión.
+ */
 function listarRankingJugadores(sesion) {
-  requerirCapitan(sesion);
   return calcularRankingJugadores();
+}
+
+/**
+ * La posición del propio jugador en el ranking del equipo, sin exponer los
+ * datos del resto (el ranking completo es solo del capitán). Para que
+ * cualquier jugador pueda ver "en qué puesto estoy" desde su perfil.
+ */
+function obtenerMiPosicionRanking(sesion) {
+  if (!sesion.id_jugador) {
+    throw new Error('Tu usuario no tiene una ficha de jugador asociada. Habla con el capitán.');
+  }
+
+  var ranking = calcularRankingJugadores();
+  var miPosicion = null;
+  ranking.forEach(function (r, indice) {
+    if (r.id_jugador === sesion.id_jugador) miPosicion = { indice: indice, datos: r };
+  });
+
+  if (!miPosicion) return null;
+
+  return {
+    posicion: miPosicion.indice + 1,
+    total_jugadores: ranking.length,
+    porcentaje_victorias: miPosicion.datos.porcentaje_victorias,
+    partidos_jugados: miPosicion.datos.partidos_jugados
+  };
 }
 
 function calcularRankingJugadores() {
@@ -239,10 +268,122 @@ function calcularRankingJugadores() {
   });
 }
 
-/** Estadísticas de cada pareja que se haya formado alguna vez (juntando todas las jornadas). Solo capitán. */
+/**
+ * Estadísticas de cada pareja que se haya formado alguna vez (juntando
+ * todas las jornadas). Cualquier persona con sesión válida puede verlo.
+ */
 function listarEstadisticasParejas(sesion) {
-  requerirCapitan(sesion);
   return calcularEstadisticasParejas();
+}
+
+/**
+ * Resumen de cada jornada ya jugada: victorias y derrotas del equipo en esa
+ * jornada (no partido a partido, eso ya lo da listarResultados). Para la
+ * pantalla "Clasificación" del jugador. Cualquier sesión válida puede verlo.
+ */
+function listarResumenJornadas() {
+  var partidoPorId = {};
+  leerFilas('PARTIDOS').forEach(function (p) { partidoPorId[p.id_partido] = p; });
+
+  var resultadosPorJornada = {};
+  leerFilas('RESULTADOS').forEach(function (r) {
+    var partido = partidoPorId[r.id_partido];
+    if (!partido) return;
+    var idJornada = partido.id_jornada;
+    if (!resultadosPorJornada[idJornada]) resultadosPorJornada[idJornada] = { victorias: 0, derrotas: 0 };
+    if (r.resultado === 'GANADO') resultadosPorJornada[idJornada].victorias++;
+    else resultadosPorJornada[idJornada].derrotas++;
+  });
+
+  return leerFilas('JORNADAS')
+    .filter(function (j) { return resultadosPorJornada[j.id_jornada]; })
+    .map(function (j) {
+      var r = resultadosPorJornada[j.id_jornada];
+      return {
+        id_jornada: j.id_jornada,
+        rival: j.rival,
+        fecha: j.fecha,
+        local_visitante: j.local_visitante,
+        estado: j.estado,
+        victorias: r.victorias,
+        derrotas: r.derrotas,
+        partidos_jugados: r.victorias + r.derrotas
+      };
+    })
+    .sort(function (a, b) { return String(b.fecha).localeCompare(String(a.fecha)); });
+}
+
+/** Puntos por número de partido según el reglamento oficial de la SNP (12 en juego por enfrentamiento). */
+var PUNTOS_POR_PARTIDO_SNP = { 1: 3, 2: 3, 3: 2, 4: 2, 5: 2 };
+
+/**
+ * Clasificación del equipo en la liga, según el reglamento de la SNP: cada
+ * enfrentamiento reparte 12 puntos entre los 5 partidos (parejas 1 y 2 valen
+ * 3 puntos cada una si se ganan, parejas 3/4/5 valen 2 puntos cada una), y
+ * se gana el enfrentamiento ganando al menos 3 de los 5 partidos. Solo
+ * cuentan los enfrentamientos con los 5 partidos ya resueltos.
+ */
+function obtenerClasificacionEquipo() {
+  var jornadaPorId = {};
+  leerFilas('JORNADAS').forEach(function (j) { jornadaPorId[j.id_jornada] = j; });
+
+  var partidoPorId = {};
+  leerFilas('PARTIDOS').forEach(function (p) { partidoPorId[p.id_partido] = p; });
+
+  var resultadosPorJornada = {};
+  leerFilas('RESULTADOS').forEach(function (r) {
+    var partido = partidoPorId[r.id_partido];
+    if (!partido) return;
+    var idJornada = partido.id_jornada;
+    if (!resultadosPorJornada[idJornada]) resultadosPorJornada[idJornada] = [];
+    resultadosPorJornada[idJornada].push({ numero_partido: Number(partido.numero_partido), resultado: r.resultado });
+  });
+
+  var porJornada = [];
+  var totalPuntos = 0, totalPuntosPosibles = 0, encuentrosGanados = 0, encuentrosPerdidos = 0, encuentrosJugados = 0;
+
+  Object.keys(resultadosPorJornada).forEach(function (idJornada) {
+    var jornada = jornadaPorId[idJornada];
+    var partidos = resultadosPorJornada[idJornada];
+    if (!jornada || partidos.length < 5) return; // enfrentamiento todavía incompleto, no cuenta aún
+
+    var puntos = 0;
+    var partidosGanados = 0;
+    partidos.forEach(function (p) {
+      if (p.resultado === 'GANADO') {
+        puntos += PUNTOS_POR_PARTIDO_SNP[p.numero_partido] || 0;
+        partidosGanados += 1;
+      }
+    });
+
+    var ganado = partidosGanados >= 3;
+    totalPuntos += puntos;
+    totalPuntosPosibles += 12;
+    encuentrosJugados += 1;
+    if (ganado) encuentrosGanados += 1; else encuentrosPerdidos += 1;
+
+    porJornada.push({
+      id_jornada: idJornada,
+      rival: jornada.rival,
+      fecha: jornada.fecha,
+      local_visitante: jornada.local_visitante,
+      partidos_ganados: partidosGanados,
+      partidos_perdidos: 5 - partidosGanados,
+      puntos: puntos,
+      ganado: ganado
+    });
+  });
+
+  porJornada.sort(function (a, b) { return String(b.fecha).localeCompare(String(a.fecha)); });
+
+  return {
+    encuentros_jugados: encuentrosJugados,
+    encuentros_ganados: encuentrosGanados,
+    encuentros_perdidos: encuentrosPerdidos,
+    puntos_totales: totalPuntos,
+    puntos_posibles: totalPuntosPosibles,
+    por_jornada: porJornada
+  };
 }
 
 function calcularEstadisticasParejas() {
