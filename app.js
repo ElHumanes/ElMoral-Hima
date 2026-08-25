@@ -1166,7 +1166,95 @@ function irAVistaParejas(jornada) {
     parejasDisponibles = resultado.jugadores;
     pintarDisponiblesParejas();
     pintarParejasFormadas();
+
+    if (parejasDisponibles.length === 10) {
+      cargarSugerenciaAlineacion();
+    } else {
+      document.getElementById('sugerencia-alineacion').classList.add('oculto');
+    }
   });
+}
+
+/**
+ * En cuanto el pool de candidatos son exactamente 10 (los apuntados recién
+ * cerrada la convocatoria, o siempre en el caso de rehacer parejas), se
+ * sugiere de entrada la mejor alineación calculada por el motor de
+ * recomendación, para ayudar a decidir antes de tocar nada a mano.
+ */
+function cargarSugerenciaAlineacion() {
+  var guardada = obtenerSesionGuardada();
+  var contenedor = document.getElementById('sugerencia-alineacion');
+  contenedor.classList.remove('oculto');
+  contenedor.innerHTML = '<p class="texto-vacio">Calculando la mejor alineación sugerida...</p>';
+
+  var ids = parejasDisponibles.map(function (j) { return j.id_jugador; });
+  var idJornadaPeticion = parejasJornadaId;
+
+  llamarApi('previsualizarAlineaciones', { token: guardada.token, ids_jugadores: ids })
+    .then(function (resultado) {
+      if (idJornadaPeticion !== parejasJornadaId) return; // el capitán ya salió de esta jornada
+      if (!resultado.ok || !resultado.recomendaciones || !resultado.recomendaciones.length) {
+        contenedor.classList.add('oculto');
+        return;
+      }
+      pintarSugerenciaAlineacion(resultado.recomendaciones[0]);
+    })
+    .catch(function () {
+      contenedor.classList.add('oculto');
+    });
+}
+
+function pintarSugerenciaAlineacion(alineacion) {
+  var contenedor = document.getElementById('sugerencia-alineacion');
+  contenedor.innerHTML = '';
+
+  var titulo = document.createElement('h3');
+  titulo.className = 'titulo-seccion titulo-subseccion';
+  titulo.style.marginTop = '0';
+  titulo.textContent = '✨ Alineación sugerida';
+  contenedor.appendChild(titulo);
+
+  alineacion.parejas.forEach(function (p) {
+    var fila = document.createElement('div');
+    fila.className = 'pareja-recomendada';
+
+    var nombres = document.createElement('div');
+    nombres.className = 'pareja-jugadores';
+    var etiqueta = document.createElement('span');
+    etiqueta.textContent = 'Partido ' + p.numero_partido + ':';
+    nombres.appendChild(etiqueta);
+    nombres.appendChild(crearParJugadores(p.jugador_a, p.jugador_b));
+    fila.appendChild(nombres);
+
+    contenedor.appendChild(fila);
+  });
+
+  var botonUsar = document.createElement('button');
+  botonUsar.type = 'button';
+  botonUsar.className = 'boton boton-primario';
+  botonUsar.textContent = 'Usar esta alineación';
+  botonUsar.addEventListener('click', function () {
+    aplicarSugerenciaAlineacion(alineacion);
+  });
+  contenedor.appendChild(botonUsar);
+}
+
+function aplicarSugerenciaAlineacion(alineacion) {
+  var jugadorPorId = {};
+  parejasDisponibles.forEach(function (j) { jugadorPorId[j.id_jugador] = j; });
+
+  parejasFormadas = alineacion.parejas.map(function (p) {
+    var a = jugadorPorId[p.jugador_a.id_jugador];
+    var b = jugadorPorId[p.jugador_b.id_jugador];
+    return { id_jugador_a: a.id_jugador, id_jugador_b: b.id_jugador, a: a, b: b, compat: p.compatibilidad };
+  });
+  parejasDisponibles = [];
+  parejaEnFormacionIds = [];
+
+  document.getElementById('sugerencia-alineacion').classList.add('oculto');
+  document.getElementById('vista-previa-pareja').classList.add('oculto');
+  pintarDisponiblesParejas();
+  pintarParejasFormadas();
 }
 
 /** Texto de resumen de un jugador para la pantalla de parejas: posición, récord y asistencia. */
@@ -1243,6 +1331,10 @@ function pintarDisponiblesParejas() {
 }
 
 function manejarClicJugadorPareja(jugador) {
+  // Si el capitán empieza a formar parejas a mano, la sugerencia calculada
+  // para el pool original ya no aplica (puede que la esté descartando).
+  document.getElementById('sugerencia-alineacion').classList.add('oculto');
+
   var indice = parejaEnFormacionIds.indexOf(jugador.id_jugador);
   if (indice !== -1) {
     parejaEnFormacionIds.splice(indice, 1);

@@ -241,18 +241,13 @@ function explicarPareja(p, contexto) {
 
 /**
  * Genera hasta 3 alineaciones recomendadas (5 parejas cada una) a partir de
- * los 10 jugadores ya seleccionados para la jornada, ordenadas de mejor a
- * peor ÍNDICE_ALINEACION.
+ * una lista de exactamente 10 ids de jugadores, ordenadas de mejor a peor
+ * ÍNDICE_ALINEACION. Núcleo compartido por generarRecomendaciones (requiere
+ * selección ya guardada) y previsualizarAlineaciones (calcula al vuelo,
+ * antes de guardar nada, con el pool de candidatos que ve el capitán al
+ * abrir la pantalla de parejas).
  */
-function generarRecomendaciones(sesion, idJornada) {
-  requerirCapitan(sesion);
-
-  var seleccionados = listarSeleccionados(idJornada);
-  if (seleccionados.length !== 10) {
-    throw new Error('Primero debes seleccionar los 10 jugadores de esta jornada.');
-  }
-  var ids = seleccionados.map(function (s) { return s.id_jugador; });
-
+function generarMejoresAlineaciones(ids) {
   var contexto = construirContextoRecomendacion(ids);
   var pesos = contexto.pesos;
   var todasLasAlineaciones = generarTodasLasAlineaciones(ids);
@@ -292,4 +287,36 @@ function generarRecomendaciones(sesion, idJornada) {
       })
     };
   });
+}
+
+/** Igual que antes: recomendaciones para una jornada cuyos 10 seleccionados ya están guardados. */
+function generarRecomendaciones(sesion, idJornada) {
+  requerirCapitan(sesion);
+
+  var seleccionados = listarSeleccionados(idJornada);
+  if (seleccionados.length !== 10) {
+    throw new Error('Primero debes seleccionar los 10 jugadores de esta jornada.');
+  }
+  var ids = seleccionados.map(function (s) { return s.id_jugador; });
+  return generarMejoresAlineaciones(ids);
+}
+
+/**
+ * Recomendación instantánea sin haber guardado nada todavía: recibe
+ * directamente los 10 ids del pool que el capitán ve al abrir la pantalla
+ * de parejas (apuntados a la convocatoria, o los 10 ya seleccionados si se
+ * están rehaciendo), para sugerir la mejor alineación en cuanto entra.
+ */
+function previsualizarAlineaciones(sesion, idsJugadores) {
+  requerirCapitan(sesion);
+
+  if (!Array.isArray(idsJugadores) || idsJugadores.length !== 10) {
+    throw new Error('Se necesitan exactamente 10 jugadores para calcular una alineación.');
+  }
+  var idsUnicos = idsJugadores.filter(function (id, i) { return idsJugadores.indexOf(id) === i; });
+  if (idsUnicos.length !== 10) {
+    throw new Error('Hay jugadores repetidos en la lista.');
+  }
+
+  return generarMejoresAlineaciones(idsJugadores);
 }
