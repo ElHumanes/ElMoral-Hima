@@ -132,6 +132,19 @@ function eliminarFilas(nombreHoja, columnaId, valorId) {
   }
 }
 
+/**
+ * Borra todas las filas de datos de una pestaña, dejando solo la fila de
+ * cabeceras. Se usa en tareas de mantenimiento (por ejemplo, limpiar datos
+ * de prueba antes de pasar a producción), nunca desde la operativa normal.
+ */
+function vaciarHoja(nombreHoja) {
+  var hoja = getSheet(nombreHoja);
+  var ultimaFila = hoja.getLastRow();
+  if (ultimaFila > 1) {
+    hoja.deleteRows(2, ultimaFila - 1);
+  }
+}
+
 /** Genera un identificador único (UUID). Gratuito, nativo de Apps Script. */
 function generarId() {
   return Utilities.getUuid();

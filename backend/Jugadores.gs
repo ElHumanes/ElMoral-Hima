@@ -264,3 +264,74 @@ function migrarPosicionesAmbas(sesion) {
   Logger.log('Jugadores corregidos: ' + corregidos);
   return corregidos;
 }
+
+/**
+ * Mantenimiento: borra TODOS los datos de prueba (jugadores, jornadas,
+ * convocatorias, selecciones, parejas, partidos, resultados, usuarios y
+ * sesiones) y da de alta la plantilla real del equipo, con un único
+ * capitán. Pensada para ejecutarse UNA SOLA VEZ al pasar de la demo a
+ * producción. Posición y puntuación se dejan con un valor por defecto
+ * (Derecha / 0) porque no se conocen todavía; el capitán las corrige luego
+ * jugador a jugador desde "Jugadores".
+ */
+function resetearDatosYCargarEquipoReal(sesion, jugadores, capitan) {
+  requerirCapitan(sesion);
+
+  if (!Array.isArray(jugadores) || jugadores.length === 0) {
+    throw new Error('Falta la lista de jugadores.');
+  }
+  jugadores.forEach(function (j) {
+    if (!j.nombre || !j.apellidos) throw new Error('Cada jugador necesita nombre y apellidos.');
+  });
+  if (!capitan || !capitan.nombre_usuario || !capitan.codigo_acceso) {
+    throw new Error('Faltan los datos de acceso del capitán.');
+  }
+  if (capitan.codigo_acceso.length < 4) {
+    throw new Error('El código de acceso del capitán debe tener al menos 4 caracteres.');
+  }
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    ['SELECCIONADOS', 'PAREJAS', 'PARTIDOS', 'RESULTADOS', 'CONVOCATORIAS', 'JORNADAS', 'JUGADORES', 'USUARIOS', 'SESIONES']
+      .forEach(function (hoja) { vaciarHoja(hoja); });
+
+    var idTemporada = obtenerOCrearTemporadaActual();
+    var idJugadorCapitan = '';
+
+    jugadores.forEach(function (j) {
+      var idJugador = generarId();
+      agregarFila('JUGADORES', {
+        id_jugador: idJugador,
+        nombre: j.nombre,
+        apellidos: j.apellidos,
+        nombre_completo: j.nombre + ' ' + j.apellidos,
+        apodo: '',
+        posicion_principal: 'DERECHA',
+        posicion_secundaria: '',
+        puntuacion: 0,
+        estado: 'ACTIVO',
+        id_temporada: idTemporada,
+        fecha_alta: ahoraIso()
+      });
+      if (j.es_capitan) idJugadorCapitan = idJugador;
+    });
+
+    agregarFila('USUARIOS', {
+      id_usuario: generarId(),
+      id_jugador: idJugadorCapitan,
+      nombre_usuario: capitan.nombre_usuario,
+      rol: 'CAPITAN',
+      codigo_acceso_hash: hashTexto(capitan.codigo_acceso),
+      estado: 'ACTIVO',
+      fecha_creacion: ahoraIso(),
+      ultimo_acceso: ''
+    });
+
+    registrarLog(sesion.id_usuario, 'RESET_DATOS_EQUIPO_REAL', jugadores.length + ' jugadores reales cargados');
+  } finally {
+    lock.releaseLock();
+  }
+
+  return { ok: true, jugadores_creados: jugadores.length };
+}
