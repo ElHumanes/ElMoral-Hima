@@ -275,6 +275,36 @@ function irAVistaJugadores() {
   cargarJugadores();
 }
 
+/**
+ * La puntuación se actualiza sola cada semana desde el ranking de la SNP,
+ * pero el capitán puede forzarlo aquí en cualquier momento (por ejemplo,
+ * justo después de una jornada) sin tener que esperar al lunes.
+ */
+function actualizarPuntuacionesSNP() {
+  var boton = document.getElementById('boton-actualizar-puntuaciones-snp');
+  var guardada = obtenerSesionGuardada();
+  boton.disabled = true;
+  boton.textContent = 'Consultando la SNP (puede tardar un rato)...';
+
+  llamarApi('actualizarPuntuacionesSNP', { token: guardada.token })
+    .then(function (resultado) {
+      if (resultado.ok) {
+        var mensaje = resultado.actualizados.length + ' jugadores actualizados.';
+        if (resultado.sin_encontrar.length > 0) {
+          mensaje += '\n\nNo se han encontrado en el ranking de la SNP:\n' + resultado.sin_encontrar.join('\n');
+        }
+        alert(mensaje);
+        cargarJugadores();
+      } else {
+        alert(resultado.error || 'No se han podido actualizar las puntuaciones.');
+      }
+    })
+    .finally(function () {
+      boton.disabled = false;
+      boton.textContent = '🔄 Actualizar puntuaciones desde la SNP';
+    });
+}
+
 function cargarJugadores() {
   var guardada = obtenerSesionGuardada();
   var contenedor = document.getElementById('lista-jugadores');
@@ -2336,6 +2366,7 @@ document.addEventListener('DOMContentLoaded', function () {
   document.getElementById('boton-nuevo-jugador').addEventListener('click', function () {
     abrirModalJugador(null);
   });
+  document.getElementById('boton-actualizar-puntuaciones-snp').addEventListener('click', actualizarPuntuacionesSNP);
   document.getElementById('boton-cancelar-jugador').addEventListener('click', cerrarModalJugador);
   document.getElementById('formulario-jugador').addEventListener('submit', manejarEnvioJugador);
   document.getElementById('jugador-posicion-principal').addEventListener('change', function () {

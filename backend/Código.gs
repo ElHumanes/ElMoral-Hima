@@ -161,6 +161,10 @@ function manejarPeticion(e) {
       case 'crearAccesosFaltantes':
         return respuestaJson(crearAccesosFaltantes(requerirSesionValida(params.token)));
 
+      case 'actualizarPuntuacionesSNP':
+        requerirCapitan(requerirSesionValida(params.token));
+        return respuestaJson(actualizarPuntuacionesSNP());
+
       case 'previsualizarAlineaciones':
         return respuestaOk({ recomendaciones: previsualizarAlineaciones(requerirSesionValida(params.token), params.ids_jugadores) });
 
