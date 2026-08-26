@@ -299,6 +299,10 @@ body {
   flex-wrap: wrap;
 }
 
+.patrocinadores-fila--grande {
+  margin-top: 12px;
+}
+
 .patrocinador-tarjeta {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -327,15 +331,15 @@ body {
 
 /* Los logos cuadrados (con más margen en blanco alrededor del dibujo) se
    ven pequeños si se ajustan a la misma altura que los logos apaisados;
-   se les da más espacio para que tengan un tamaño visual comparable. */
+   van en su propia fila, más abajo, con bastante más tamaño. */
 .patrocinador-tarjeta--grande {
-  height: 72px;
-  padding: 8px 10px;
+  height: 108px;
+  padding: 10px;
 }
 
 .patrocinador-tarjeta--grande img {
-  max-height: 60px;
-  max-width: 60px;
+  max-height: 88px;
+  max-width: 88px;
 }
 
 /* Menú de acciones del capitán (pantalla de inicio) */
