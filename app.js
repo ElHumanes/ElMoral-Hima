@@ -892,18 +892,15 @@ function manejarEnvioResultado(evento) {
       if (resultado.ok) {
         cerrarModalResultado();
         cargarPartidos(jornadaActual.id_jornada);
-        // El estado de la jornada puede haber cambiado (JUGADA / FINALIZADA); lo recargamos.
-        llamarApi('listarJornadas', { token: guardada.token }).then(function (r2) {
-          if (!r2.ok) return;
-          var actualizada = r2.jornadas.filter(function (j) { return j.id_jornada === jornadaActual.id_jornada; })[0];
-          if (actualizada) {
-            jornadaActual = actualizada;
-            var estadoBadge = document.getElementById('jornada-detalle-estado');
-            estadoBadge.className = 'insignia ' + claseInsigniaEstado(actualizada.estado);
-            estadoBadge.textContent = ESTADOS_JORNADA_TEXTO[actualizada.estado] || actualizada.estado;
-            pintarAccionesJornada(actualizada);
-          }
-        });
+        // El estado de la jornada puede haber cambiado (JUGADA / FINALIZADA);
+        // ya viene en la propia respuesta, no hace falta pedirlo aparte.
+        if (resultado.jornada) {
+          jornadaActual.estado = resultado.jornada.estado;
+          var estadoBadge = document.getElementById('jornada-detalle-estado');
+          estadoBadge.className = 'insignia ' + claseInsigniaEstado(jornadaActual.estado);
+          estadoBadge.textContent = ESTADOS_JORNADA_TEXTO[jornadaActual.estado] || jornadaActual.estado;
+          pintarAccionesJornada(jornadaActual);
+        }
       } else {
         mensajeError.textContent = resultado.error || 'No se ha podido guardar el resultado.';
         mensajeError.classList.remove('oculto');
@@ -1157,7 +1154,14 @@ function irAVistaParejas(jornada) {
   var contenedor = document.getElementById('lista-disponibles-parejas');
   contenedor.innerHTML = '<p class="texto-vacio">Cargando...</p>';
 
-  llamarApi('listarJugadoresParaParejas', { token: guardada.token, id_jornada: jornada.id_jornada }).then(function (resultado) {
+  // Antes eran 2 peticiones seguidas (primero el pool de candidatos, y solo
+  // si eran 10, la sugerencia de alineación); ahora el backend las junta en
+  // una sola llamada.
+  var idJornadaPeticion = jornada.id_jornada;
+  document.getElementById('sugerencia-alineacion').classList.add('oculto');
+
+  llamarApi('obtenerPoolYSugerenciaParejas', { token: guardada.token, id_jornada: jornada.id_jornada }).then(function (resultado) {
+    if (idJornadaPeticion !== parejasJornadaId) return; // el capitán ya salió de esta jornada
     if (!resultado.ok) {
       contenedor.innerHTML = '<p class="texto-vacio">' + (resultado.error || 'No se han podido cargar los jugadores.') + '</p>';
       return;
@@ -1172,41 +1176,10 @@ function irAVistaParejas(jornada) {
     pintarDisponiblesParejas();
     pintarParejasFormadas();
 
-    if (parejasDisponibles.length === 10) {
-      cargarSugerenciaAlineacion();
-    } else {
-      document.getElementById('sugerencia-alineacion').classList.add('oculto');
+    if (resultado.sugerencia) {
+      pintarSugerenciaAlineacion(resultado.sugerencia);
     }
   });
-}
-
-/**
- * En cuanto el pool de candidatos son exactamente 10 (los apuntados recién
- * cerrada la convocatoria, o siempre en el caso de rehacer parejas), se
- * sugiere de entrada la mejor alineación calculada por el motor de
- * recomendación, para ayudar a decidir antes de tocar nada a mano.
- */
-function cargarSugerenciaAlineacion() {
-  var guardada = obtenerSesionGuardada();
-  var contenedor = document.getElementById('sugerencia-alineacion');
-  contenedor.classList.remove('oculto');
-  contenedor.innerHTML = '<p class="texto-vacio">Calculando la mejor alineación sugerida...</p>';
-
-  var ids = parejasDisponibles.map(function (j) { return j.id_jugador; });
-  var idJornadaPeticion = parejasJornadaId;
-
-  llamarApi('previsualizarAlineaciones', { token: guardada.token, ids_jugadores: ids })
-    .then(function (resultado) {
-      if (idJornadaPeticion !== parejasJornadaId) return; // el capitán ya salió de esta jornada
-      if (!resultado.ok || !resultado.recomendaciones || !resultado.recomendaciones.length) {
-        contenedor.classList.add('oculto');
-        return;
-      }
-      pintarSugerenciaAlineacion(resultado.recomendaciones[0]);
-    })
-    .catch(function () {
-      contenedor.classList.add('oculto');
-    });
 }
 
 function pintarSugerenciaAlineacion(alineacion) {
@@ -1630,10 +1603,10 @@ function comprobarConvocatoriaAbiertaParaJugador() {
   var guardada = obtenerSesionGuardada();
   var tarjeta = document.getElementById('tarjeta-convocatoria-jugador');
 
-  llamarApi('listarJornadas', { token: guardada.token }).then(function (resultado) {
+  llamarApi('obtenerResumenInicio', { token: guardada.token }).then(function (resultado) {
     if (!resultado.ok) return;
 
-    var abierta = resultado.jornadas.filter(function (j) { return j.estado === 'CONVOCATORIA_ABIERTA'; })[0];
+    var abierta = resultado.resumen.convocatoria;
     if (!abierta) {
       tarjeta.classList.add('oculto');
       return;
@@ -1645,18 +1618,14 @@ function comprobarConvocatoriaAbiertaParaJugador() {
       formatearFecha(abierta.fecha) + (abierta.lugar ? ' · ' + abierta.lugar : '');
     tarjeta.classList.remove('oculto');
 
-    llamarApi('listarConvocatoria', { token: guardada.token, id_jornada: abierta.id_jornada }).then(function (r2) {
-      if (!r2.ok || !sesionActual.id_jugador) return;
-      var miRespuesta = r2.convocatoria.filter(function (c) { return c.id_jugador === sesionActual.id_jugador; })[0];
-      var textoRespuesta = document.getElementById('convocatoria-jugador-respuesta-actual');
-      if (miRespuesta && miRespuesta.disponibilidad !== 'PENDIENTE') {
-        textoRespuesta.textContent = 'Tu respuesta actual: ' +
-          (miRespuesta.disponibilidad === 'ME_APUNTO' ? 'Me apunto ✅' : 'No puedo ❌');
-        textoRespuesta.classList.remove('oculto');
-      } else {
-        textoRespuesta.classList.add('oculto');
-      }
-    });
+    var textoRespuesta = document.getElementById('convocatoria-jugador-respuesta-actual');
+    if (abierta.mi_respuesta && abierta.mi_respuesta !== 'PENDIENTE') {
+      textoRespuesta.textContent = 'Tu respuesta actual: ' +
+        (abierta.mi_respuesta === 'ME_APUNTO' ? 'Me apunto ✅' : 'No puedo ❌');
+      textoRespuesta.classList.remove('oculto');
+    } else {
+      textoRespuesta.classList.add('oculto');
+    }
 
     document.getElementById('boton-me-apunto').onclick = function () {
       responderConvocatoria(abierta.id_jornada, 'ME_APUNTO');
@@ -1688,45 +1657,34 @@ function comprobarConvocatoriaAbiertaParaCapitan() {
   var tarjeta = document.getElementById('tarjeta-convocatoria-capitan');
   var contenedor = document.getElementById('lista-convocatoria-capitan');
 
-  llamarApi('listarJornadas', { token: guardada.token }).then(function (resultado) {
+  llamarApi('obtenerResumenInicio', { token: guardada.token }).then(function (resultado) {
     if (!resultado.ok) return;
 
-    var abiertas = resultado.jornadas.filter(function (j) { return j.estado === 'CONVOCATORIA_ABIERTA'; });
-    if (abiertas.length === 0) {
+    var convocatorias = resultado.resumen.convocatorias || [];
+    if (convocatorias.length === 0) {
       tarjeta.classList.add('oculto');
       return;
     }
 
     tarjeta.classList.remove('oculto');
-    contenedor.innerHTML = '<p class="texto-vacio">Cargando...</p>';
-
-    Promise.all(abiertas.map(function (jornada) {
-      return llamarApi('listarConvocatoria', { token: guardada.token, id_jornada: jornada.id_jornada })
-        .then(function (r) { return { jornada: jornada, convocatoria: r.ok ? r.convocatoria : [] }; });
-    })).then(function (resultados) {
-      contenedor.innerHTML = '';
-      resultados.forEach(function (item) {
-        var apuntados = item.convocatoria.filter(function (c) { return c.disponibilidad === 'ME_APUNTO'; }).length;
-        var noDisponibles = item.convocatoria.filter(function (c) { return c.disponibilidad === 'NO_PUEDO'; }).length;
-        var pendientes = item.convocatoria.filter(function (c) { return c.disponibilidad === 'PENDIENTE'; }).length;
-
-        var fila = document.createElement('div');
-        fila.className = 'jornada-tarjeta';
-        fila.innerHTML =
-          '<div class="jornada-info">' +
-            '<span class="jornada-rival"></span>' +
-            '<span class="jornada-meta"></span>' +
-          '</div>' +
-          '<span class="insignia insignia-posicion">Ver</span>';
-        fila.querySelector('.jornada-rival').textContent =
-          (item.jornada.local_visitante === 'LOCAL' ? 'vs ' : '@ ') + item.jornada.rival;
-        fila.querySelector('.jornada-meta').textContent =
-          formatearFecha(item.jornada.fecha) + ' · ✅ ' + apuntados + ' · ❌ ' + noDisponibles + ' · ⏳ ' + pendientes;
-        fila.addEventListener('click', function () {
-          abrirDetalleJornada(item.jornada);
-        });
-        contenedor.appendChild(fila);
+    contenedor.innerHTML = '';
+    convocatorias.forEach(function (item) {
+      var fila = document.createElement('div');
+      fila.className = 'jornada-tarjeta';
+      fila.innerHTML =
+        '<div class="jornada-info">' +
+          '<span class="jornada-rival"></span>' +
+          '<span class="jornada-meta"></span>' +
+        '</div>' +
+        '<span class="insignia insignia-posicion">Ver</span>';
+      fila.querySelector('.jornada-rival').textContent =
+        (item.local_visitante === 'LOCAL' ? 'vs ' : '@ ') + item.rival;
+      fila.querySelector('.jornada-meta').textContent =
+        formatearFecha(item.fecha) + ' · ✅ ' + item.apuntados + ' · ❌ ' + item.no_disponibles + ' · ⏳ ' + item.pendientes;
+      fila.addEventListener('click', function () {
+        abrirDetalleJornada(item);
       });
+      contenedor.appendChild(fila);
     });
   });
 }
@@ -1934,15 +1892,10 @@ function cargarEstadisticasPerfil(idJugador, idContenedor) {
   var guardada = obtenerSesionGuardada();
   var contenedor = document.getElementById(idContenedor || 'tarjeta-perfil-estadisticas');
 
-  Promise.all([
-    llamarApi('obtenerEstadisticasJugador', { token: guardada.token, id_jugador: idJugador }),
-    llamarApi('obtenerMiPosicionRanking', { token: guardada.token })
-  ]).then(function (resultados) {
-    var resultado = resultados[0];
-    var resultadoPosicion = resultados[1];
+  llamarApi('obtenerEstadisticasCompletasJugador', { token: guardada.token, id_jugador: idJugador }).then(function (resultado) {
     if (!resultado.ok) return;
     var e = resultado.estadisticas;
-    var posicion = resultadoPosicion.ok ? resultadoPosicion.ranking : null;
+    var posicion = resultado.posicion;
 
     contenedor.classList.remove('oculto');
 
@@ -2317,28 +2270,17 @@ function cargarClasificacion() {
   listaRanking.innerHTML = '<p class="texto-vacio">Cargando...</p>';
   listaParejas.innerHTML = '<p class="texto-vacio">Cargando...</p>';
 
-  Promise.all([
-    llamarApi('obtenerClasificacionEquipo', { token: guardada.token }),
-    llamarApi('listarRankingJugadores', { token: guardada.token }),
-    llamarApi('listarEstadisticasParejas', { token: guardada.token })
-  ]).then(function (respuestas) {
-    var equipo = respuestas[0], ranking = respuestas[1], parejas = respuestas[2];
-
-    if (equipo.ok) {
-      pintarClasificacionEquipo(equipo.clasificacion);
-    } else {
-      resumenEquipo.innerHTML = '<p class="texto-vacio">' + (equipo.error || 'No se ha podido cargar.') + '</p>';
+  llamarApi('obtenerClasificacionCompleta', { token: guardada.token }).then(function (resultado) {
+    if (!resultado.ok) {
+      var mensajeError = '<p class="texto-vacio">' + (resultado.error || 'No se ha podido cargar.') + '</p>';
+      resumenEquipo.innerHTML = mensajeError;
+      listaRanking.innerHTML = mensajeError;
+      listaParejas.innerHTML = mensajeError;
+      return;
     }
-    if (ranking.ok) {
-      pintarRankingJugadores(ranking.ranking, 'clasificacion-ranking-jugadores');
-    } else {
-      listaRanking.innerHTML = '<p class="texto-vacio">' + (ranking.error || 'No se ha podido cargar.') + '</p>';
-    }
-    if (parejas.ok) {
-      pintarRankingParejas(parejas.parejas, 'clasificacion-ranking-parejas');
-    } else {
-      listaParejas.innerHTML = '<p class="texto-vacio">' + (parejas.error || 'No se ha podido cargar.') + '</p>';
-    }
+    pintarClasificacionEquipo(resultado.clasificacion.equipo);
+    pintarRankingJugadores(resultado.clasificacion.ranking_jugadores, 'clasificacion-ranking-jugadores');
+    pintarRankingParejas(resultado.clasificacion.ranking_parejas, 'clasificacion-ranking-parejas');
   }).catch(function () {
     var mensaje = '<p class="texto-vacio">No se ha podido conectar con el servidor.</p>';
     resumenEquipo.innerHTML = mensaje;
@@ -2405,16 +2347,11 @@ function cargarDashboard() {
   listaRanking.innerHTML = '';
   listaParejas.innerHTML = '';
 
-  Promise.all([
-    llamarApi('obtenerDashboard', { token: guardada.token }),
-    llamarApi('listarRankingJugadores', { token: guardada.token }),
-    llamarApi('listarEstadisticasParejas', { token: guardada.token })
-  ]).then(function (respuestas) {
-    var dash = respuestas[0], ranking = respuestas[1], parejas = respuestas[2];
-
-    if (dash.ok) pintarResumenDashboard(dash.dashboard);
-    if (ranking.ok) pintarRankingJugadores(ranking.ranking);
-    if (parejas.ok) pintarRankingParejas(parejas.parejas);
+  llamarApi('obtenerDashboard', { token: guardada.token }).then(function (dash) {
+    if (!dash.ok) return;
+    pintarResumenDashboard(dash.dashboard);
+    pintarRankingJugadores(dash.dashboard.ranking_jugadores);
+    pintarRankingParejas(dash.dashboard.ranking_parejas);
   });
 }
 

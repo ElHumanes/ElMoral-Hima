@@ -224,6 +224,17 @@ function listarRankingJugadores(sesion) {
  * datos del resto (el ranking completo es solo del capitán). Para que
  * cualquier jugador pueda ver "en qué puesto estoy" desde su perfil.
  */
+/**
+ * Combina las estadísticas de un jugador con "mi puesto en el ranking"
+ * (cuando se piden las estadísticas propias) en una sola llamada, en vez de
+ * dos peticiones seguidas como antes.
+ */
+function obtenerEstadisticasCompletasJugador(sesion, idJugador) {
+  var estadisticas = obtenerEstadisticasJugador(idJugador);
+  var posicion = (sesion.id_jugador && sesion.id_jugador === idJugador) ? obtenerMiPosicionRanking(sesion) : null;
+  return { estadisticas: estadisticas, posicion: posicion };
+}
+
 function obtenerMiPosicionRanking(sesion) {
   if (!sesion.id_jugador) {
     throw new Error('Tu usuario no tiene una ficha de jugador asociada. Habla con el capitán.');
@@ -386,6 +397,18 @@ function obtenerClasificacionEquipo() {
   };
 }
 
+/**
+ * Junta en una sola llamada las 3 peticiones que hacía la pantalla de
+ * Clasificación (equipo + ranking de jugadores + ranking de parejas).
+ */
+function obtenerClasificacionCompleta() {
+  return {
+    equipo: obtenerClasificacionEquipo(),
+    ranking_jugadores: calcularRankingJugadores(),
+    ranking_parejas: calcularEstadisticasParejas()
+  };
+}
+
 function calcularEstadisticasParejas() {
   var parejas = leerFilas('PAREJAS');
   var partidos = leerFilas('PARTIDOS');
@@ -464,7 +487,12 @@ function obtenerDashboard(sesion) {
     .filter(function (j) { return estadosPendientes.indexOf(j.estado) !== -1; })
     .sort(function (a, b) { return String(a.fecha).localeCompare(String(b.fecha)); })[0];
 
-  var ranking = calcularRankingJugadores().filter(function (r) { return r.partidos_jugados > 0; });
+  // Se calculan una sola vez y se devuelven completos: así el Dashboard no
+  // necesita 2 peticiones más aparte (listarRankingJugadores/listarEstadisticasParejas)
+  // solo para pintar las mismas tablas que ya hacen falta aquí para elegir
+  // "mejor jugador" y "mejor pareja".
+  var rankingCompleto = calcularRankingJugadores();
+  var ranking = rankingCompleto.filter(function (r) { return r.partidos_jugados > 0; });
   var mejorJugador = ranking[0];
 
   var parejasStats = calcularEstadisticasParejas();
@@ -489,6 +517,8 @@ function obtenerDashboard(sesion) {
       jugador_b: mejorPareja.jugador_b,
       porcentaje: mejorPareja.porcentaje_victorias,
       partidos: mejorPareja.partidos_juntos
-    } : null
+    } : null,
+    ranking_jugadores: rankingCompleto,
+    ranking_parejas: parejasStats
   };
 }

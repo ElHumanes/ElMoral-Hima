@@ -7,6 +7,54 @@
  * JUGADA. Cuando los 5 partidos ya tienen resultado, pasa a FINALIZADA.
  */
 
+/**
+ * Todos los partidos que ya tienen resultado, de todas las jornadas, con el
+ * rival y la fecha de cada una — para la pantalla "Resultados" del jugador,
+ * que junta el equipo y sus propios partidos en un único sitio (antes había
+ * que entrar jornada por jornada para verlos).
+ */
+function listarResultados() {
+  var jornadaPorId = {};
+  leerFilas('JORNADAS').forEach(function (j) { jornadaPorId[j.id_jornada] = j; });
+
+  var parejaPorId = {};
+  leerFilas('PAREJAS').forEach(function (p) { parejaPorId[p.id_pareja] = p; });
+
+  var jugadorPorId = {};
+  leerFilas('JUGADORES').forEach(function (j) { jugadorPorId[j.id_jugador] = j; });
+
+  var partidoPorId = {};
+  leerFilas('PARTIDOS').forEach(function (p) { partidoPorId[p.id_partido] = p; });
+
+  return leerFilas('RESULTADOS').map(function (r) {
+    var partido = partidoPorId[r.id_partido];
+    if (!partido) return null;
+    var pareja = parejaPorId[partido.id_pareja] || {};
+    var jornada = jornadaPorId[partido.id_jornada] || {};
+    var a = jugadorPorId[pareja.id_jugador_a] || {};
+    var b = jugadorPorId[pareja.id_jugador_b] || {};
+
+    return {
+      id_partido: partido.id_partido,
+      id_jornada: partido.id_jornada,
+      numero_partido: Number(partido.numero_partido),
+      jornada: { rival: jornada.rival || '', fecha: jornada.fecha || '', local_visitante: jornada.local_visitante || '' },
+      jugador_a: { id_jugador: pareja.id_jugador_a || '', nombre_completo: a.nombre_completo || '', apodo: a.apodo || '', foto_url: a.foto_url || '' },
+      jugador_b: { id_jugador: pareja.id_jugador_b || '', nombre_completo: b.nombre_completo || '', apodo: b.apodo || '', foto_url: b.foto_url || '' },
+      resultado: r.resultado,
+      sets_favor: Number(r.sets_favor) || 0,
+      sets_contra: Number(r.sets_contra) || 0,
+      juegos_favor: Number(r.juegos_favor) || 0,
+      juegos_contra: Number(r.juegos_contra) || 0
+    };
+  }).filter(function (x) { return x !== null; })
+    .sort(function (x, y) {
+      var porFecha = String(y.jornada.fecha).localeCompare(String(x.jornada.fecha));
+      if (porFecha !== 0) return porFecha;
+      return x.numero_partido - y.numero_partido;
+    });
+}
+
 function listarPartidos(idJornada) {
   if (!idJornada) throw new Error('Falta el identificador de la jornada.');
 
@@ -90,7 +138,15 @@ function registrarResultado(sesion, datos) {
     lock.releaseLock();
   }
 
-  return { ok: true };
+  // Se devuelve ya el estado actualizado de la jornada (puede haber pasado a
+  // JUGADA/FINALIZADA) para que el frontend no tenga que pedirlo aparte con
+  // otra llamada a listarJornadas.
+  var jornadaActualizada = leerFilas('JORNADAS').filter(function (j) { return j.id_jornada === partido.id_jornada; })[0];
+
+  return {
+    ok: true,
+    jornada: jornadaActualizada ? { id_jornada: jornadaActualizada.id_jornada, estado: jornadaActualizada.estado } : null
+  };
 }
 
 function actualizarEstadoJornadaSegunResultados(idJornada) {

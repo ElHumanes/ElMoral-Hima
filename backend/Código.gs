@@ -73,6 +73,9 @@ function manejarPeticion(e) {
       case 'listarHistorialConvocatorias':
         return respuestaOk({ historial: listarHistorialConvocatoriasJugador(requerirSesionValida(params.token)) });
 
+      case 'obtenerResumenInicio':
+        return respuestaOk({ resumen: obtenerResumenInicio(requerirSesionValida(params.token)) });
+
       case 'listarSeleccionados':
         if (!validarSesion(params.token)) return respuestaError('Sesión no válida o caducada.');
         return respuestaOk({ seleccionados: listarSeleccionados(params.id_jornada) });
@@ -87,6 +90,10 @@ function manejarPeticion(e) {
       case 'listarJugadoresParaParejas':
         if (!validarSesion(params.token)) return respuestaError('Sesión no válida o caducada.');
         return respuestaOk({ jugadores: listarJugadoresParaParejas(params.id_jornada) });
+
+      case 'obtenerPoolYSugerenciaParejas':
+        if (!validarSesion(params.token)) return respuestaError('Sesión no válida o caducada.');
+        return respuestaOk(obtenerPoolYSugerenciaParejas(params.id_jornada));
 
       case 'guardarParejas':
         return respuestaJson(guardarParejas(requerirSesionValida(params.token), params.id_jornada, params.parejas));
@@ -105,6 +112,9 @@ function manejarPeticion(e) {
       case 'obtenerEstadisticasJugador':
         if (!validarSesion(params.token)) return respuestaError('Sesión no válida o caducada.');
         return respuestaOk({ estadisticas: obtenerEstadisticasJugador(params.id_jugador) });
+
+      case 'obtenerEstadisticasCompletasJugador':
+        return respuestaOk(obtenerEstadisticasCompletasJugador(requerirSesionValida(params.token), params.id_jugador));
 
       case 'listarUsuarios':
         return respuestaOk({ usuarios: listarUsuarios(requerirSesionValida(params.token)) });
@@ -131,6 +141,10 @@ function manejarPeticion(e) {
       case 'obtenerClasificacionEquipo':
         if (!validarSesion(params.token)) return respuestaError('Sesión no válida o caducada.');
         return respuestaOk({ clasificacion: obtenerClasificacionEquipo() });
+
+      case 'obtenerClasificacionCompleta':
+        if (!validarSesion(params.token)) return respuestaError('Sesión no válida o caducada.');
+        return respuestaOk({ clasificacion: obtenerClasificacionCompleta() });
 
       case 'obtenerDashboard':
         return respuestaOk({ dashboard: obtenerDashboard(requerirSesionValida(params.token)) });

@@ -87,6 +87,79 @@ function responderConvocatoria(sesion, idJornada, disponibilidad, observaciones)
 }
 
 /**
+ * Todo lo necesario para la tarjeta de "convocatoria abierta" de la
+ * pantalla de inicio, en una sola llamada. Antes hacían falta 2 peticiones
+ * para el jugador (jornadas + su respuesta), y 2+N para el capitán (una
+ * por cada convocatoria abierta) — cada petición de más cuesta 2-3 segundos
+ * fijos solo por el ida y vuelta a Apps Script, así que juntar todo en una
+ * sola llamada es la mejora que más se nota.
+ */
+function obtenerResumenInicio(sesion) {
+  var abiertas = leerFilas('JORNADAS').filter(function (j) { return j.estado === 'CONVOCATORIA_ABIERTA'; });
+
+  if (sesion.rol === 'CAPITAN') {
+    if (abiertas.length === 0) return { rol: 'CAPITAN', convocatorias: [] };
+
+    var jugadoresActivos = leerFilas('JUGADORES').filter(function (j) { return j.estado === 'ACTIVO'; });
+    var todasRespuestas = leerFilas('CONVOCATORIAS');
+
+    var convocatorias = abiertas.map(function (jornada) {
+      var respuestaPorJugador = {};
+      todasRespuestas
+        .filter(function (c) { return c.id_jornada === jornada.id_jornada; })
+        .forEach(function (r) { respuestaPorJugador[r.id_jugador] = r.disponibilidad; });
+
+      var apuntados = 0, noDisponibles = 0, pendientes = 0;
+      jugadoresActivos.forEach(function (j) {
+        var disp = respuestaPorJugador[j.id_jugador] || 'PENDIENTE';
+        if (disp === 'ME_APUNTO') apuntados++;
+        else if (disp === 'NO_PUEDO') noDisponibles++;
+        else pendientes++;
+      });
+
+      return {
+        id_jornada: jornada.id_jornada,
+        rival: jornada.rival,
+        fecha: jornada.fecha,
+        lugar: jornada.lugar,
+        local_visitante: jornada.local_visitante,
+        estado: jornada.estado,
+        observaciones: jornada.observaciones,
+        apuntados: apuntados,
+        no_disponibles: noDisponibles,
+        pendientes: pendientes
+      };
+    });
+
+    return { rol: 'CAPITAN', convocatorias: convocatorias };
+  }
+
+  // JUGADOR
+  if (abiertas.length === 0) return { rol: 'JUGADOR', convocatoria: null };
+
+  var abierta = abiertas[0];
+  var miRespuesta = 'PENDIENTE';
+  if (sesion.id_jugador) {
+    var miFila = leerFilas('CONVOCATORIAS').filter(function (c) {
+      return c.id_jornada === abierta.id_jornada && c.id_jugador === sesion.id_jugador;
+    })[0];
+    if (miFila) miRespuesta = miFila.disponibilidad;
+  }
+
+  return {
+    rol: 'JUGADOR',
+    convocatoria: {
+      id_jornada: abierta.id_jornada,
+      rival: abierta.rival,
+      fecha: abierta.fecha,
+      lugar: abierta.lugar,
+      local_visitante: abierta.local_visitante,
+      mi_respuesta: miRespuesta
+    }
+  };
+}
+
+/**
  * Historial de convocatorias del propio jugador: para cada jornada cuya
  * convocatoria ya está cerrada o en un estado posterior, su respuesta
  * (ME_APUNTO / NO_PUEDO / NO_RESPONDIO si no llegó a contestar). No incluye

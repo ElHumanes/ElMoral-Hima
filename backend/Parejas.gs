@@ -83,6 +83,25 @@ function listarJugadoresParaParejas(idJornada) {
 }
 
 /**
+ * Combina en una sola llamada el pool de candidatos para formar parejas y,
+ * si son exactamente 10, la mejor alineación recomendada. Antes hacían
+ * falta 2 peticiones seguidas (primero el pool, y solo si eran 10, la
+ * sugerencia) — cada una con su propio coste fijo de ida y vuelta.
+ */
+function obtenerPoolYSugerenciaParejas(idJornada) {
+  var jugadores = listarJugadoresParaParejas(idJornada);
+  var sugerencia = null;
+
+  if (jugadores.length === 10) {
+    var ids = jugadores.map(function (j) { return j.id_jugador; });
+    var alineaciones = generarMejoresAlineaciones(ids);
+    sugerencia = alineaciones[0] || null;
+  }
+
+  return { jugadores: jugadores, sugerencia: sugerencia };
+}
+
+/**
  * Compara las posiciones de dos jugadores y devuelve BUENA (✓), REGULAR (⚠)
  * o MALA (❌). BUENA = uno puede jugar de derecha y el otro de revés.
  * REGULAR = ambos pueden cubrir alguna posición pero no la combinación ideal.

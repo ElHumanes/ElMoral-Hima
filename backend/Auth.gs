@@ -37,6 +37,14 @@ function login(nombreUsuario, codigoAcceso) {
     var ahora = new Date();
     var caduca = new Date(ahora.getTime() + DIAS_CADUCIDAD_SESION * 24 * 60 * 60 * 1000);
 
+    // Aprovechamos cada login para borrar las sesiones ya caducadas de este
+    // mismo usuario: si no, la pestaña SESIONES solo crece (cada inicio de
+    // sesión añadía una fila que nunca se borraba) y eso hace más lenta
+    // cada comprobación de sesión con el tiempo.
+    leerFilas('SESIONES')
+      .filter(function (s) { return s.id_usuario === usuario.id_usuario && new Date(s.fecha_expiracion).getTime() < ahora.getTime(); })
+      .forEach(function (s) { eliminarFilas('SESIONES', 'token', s.token); });
+
     agregarFila('SESIONES', {
       token: token,
       id_usuario: usuario.id_usuario,
@@ -141,14 +149,12 @@ function testConexion() {
  * USUARIOS está todavía vacía (así puedes ejecutar esta función más de una
  * vez sin peligro de duplicar usuarios).
  *
- * Cambia el usuario y el código de acceso por los que prefieras antes de
- * ejecutarla (no dejes aquí el código real de tu capitán — este archivo es
- * solo una copia de referencia, el código de verdad vive únicamente en tu
- * hoja de cálculo, nunca en el código fuente).
+ * Cambia 'capitan' y '1234' por el usuario y código que prefieras antes
+ * de ejecutarla, o dime que quieres otro y te doy la versión ajustada.
  */
 function crearPrimerCapitan() {
-  var nombreUsuario = 'CAMBIA_ESTO';
-  var codigoAcceso = 'CAMBIA_ESTO';
+  var nombreUsuario = 'capitan';
+  var codigoAcceso = '1234';
 
   var usuariosExistentes = leerFilas('USUARIOS');
   if (usuariosExistentes.length > 0) {
