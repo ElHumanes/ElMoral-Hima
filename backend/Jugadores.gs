@@ -25,7 +25,13 @@ function validarPosiciones(posicionPrincipal, posicionSecundaria) {
 }
 
 function listarJugadores() {
+  var usuarioPorJugador = {};
+  leerFilas('USUARIOS').forEach(function (u) {
+    if (u.id_jugador) usuarioPorJugador[u.id_jugador] = u;
+  });
+
   return leerFilas('JUGADORES').map(function (j) {
+    var usuario = usuarioPorJugador[j.id_jugador];
     return {
       id_jugador: j.id_jugador,
       nombre: j.nombre,
@@ -38,7 +44,8 @@ function listarJugadores() {
       estado: j.estado,
       id_temporada: j.id_temporada,
       fecha_alta: j.fecha_alta,
-      foto_url: j.foto_url || ''
+      foto_url: j.foto_url || '',
+      nombre_usuario: usuario ? usuario.nombre_usuario : ''
     };
   });
 }
@@ -62,7 +69,7 @@ function crearJugador(sesion, datos) {
 
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
-  var idJugador;
+  var idJugador, nombreUsuario;
   try {
     idJugador = generarId();
     agregarFila('JUGADORES', {
@@ -78,12 +85,28 @@ function crearJugador(sesion, datos) {
       id_temporada: obtenerOCrearTemporadaActual(),
       fecha_alta: ahoraIso()
     });
+
+    // Cada jugador nuevo tiene ya de entrada un acceso a la app: usuario a
+    // partir de su primer apellido, código temporal por defecto que puede
+    // (y debe) cambiar luego desde su perfil.
+    nombreUsuario = generarNombreUsuarioUnico(apellidos);
+    agregarFila('USUARIOS', {
+      id_usuario: generarId(),
+      id_jugador: idJugador,
+      nombre_usuario: nombreUsuario,
+      rol: 'JUGADOR',
+      codigo_acceso_hash: hashTexto(CODIGO_ACCESO_POR_DEFECTO),
+      estado: 'ACTIVO',
+      fecha_creacion: ahoraIso(),
+      ultimo_acceso: ''
+    });
+
     registrarLog(sesion.id_usuario, 'CREAR_JUGADOR', nombre + ' ' + apellidos);
   } finally {
     lock.releaseLock();
   }
 
-  return { ok: true, id_jugador: idJugador };
+  return { ok: true, id_jugador: idJugador, nombre_usuario: nombreUsuario, codigo_acceso: CODIGO_ACCESO_POR_DEFECTO };
 }
 
 function editarJugador(sesion, datos) {
@@ -334,4 +357,51 @@ function resetearDatosYCargarEquipoReal(sesion, jugadores, capitan) {
   }
 
   return { ok: true, jugadores_creados: jugadores.length };
+}
+
+/**
+ * Mantenimiento: crea el acceso (usuario + código temporal por defecto)
+ * para cualquier jugador que todavía no tenga uno. Pensada para ponerse al
+ * día justo después de activar la creación automática de accesos, con
+ * jugadores que ya existían de antes.
+ */
+function crearAccesosFaltantes(sesion) {
+  requerirCapitan(sesion);
+
+  var jugadores = leerFilas('JUGADORES');
+  var jugadoresConUsuario = {};
+  leerFilas('USUARIOS').forEach(function (u) {
+    if (u.id_jugador) jugadoresConUsuario[u.id_jugador] = true;
+  });
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  var creados = [];
+  try {
+    jugadores.forEach(function (j) {
+      if (jugadoresConUsuario[j.id_jugador]) return;
+
+      var nombreUsuario = generarNombreUsuarioUnico(j.apellidos);
+      agregarFila('USUARIOS', {
+        id_usuario: generarId(),
+        id_jugador: j.id_jugador,
+        nombre_usuario: nombreUsuario,
+        rol: 'JUGADOR',
+        codigo_acceso_hash: hashTexto(CODIGO_ACCESO_POR_DEFECTO),
+        estado: 'ACTIVO',
+        fecha_creacion: ahoraIso(),
+        ultimo_acceso: ''
+      });
+      jugadoresConUsuario[j.id_jugador] = true;
+      creados.push({ nombre_completo: j.nombre_completo, nombre_usuario: nombreUsuario });
+    });
+
+    if (creados.length > 0) {
+      registrarLog(sesion.id_usuario, 'CREAR_ACCESOS_FALTANTES', creados.length + ' accesos creados');
+    }
+  } finally {
+    lock.releaseLock();
+  }
+
+  return { ok: true, creados: creados };
 }

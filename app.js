@@ -335,10 +335,12 @@ function crearTarjetaJugador(jugador) {
         '<span class="insignia insignia-posicion"></span>' +
         '<span class="insignia ' + (estadoActivo ? 'insignia-activo' : 'insignia-inactivo') + '"></span>' +
         '<span>· Puntuación: ' + Number(jugador.puntuacion) + '</span>' +
+        '<span>· Usuario: <strong>' + (jugador.nombre_usuario || 'sin acceso') + '</strong></span>' +
       '</div>' +
     '</div>' +
     '<div class="jugador-acciones">' +
       '<button type="button" class="boton-mini boton-editar">Editar</button>' +
+      '<button type="button" class="boton-mini boton-restablecer-codigo">Restablecer contraseña</button>' +
       '<button type="button" class="boton-mini ' + (estadoActivo ? 'boton-mini-peligro boton-desactivar' : 'boton-mini-exito boton-reactivar') + '">' +
         (estadoActivo ? 'Desactivar' : 'Reactivar') +
       '</button>' +
@@ -357,6 +359,10 @@ function crearTarjetaJugador(jugador) {
     abrirModalJugador(jugador);
   });
 
+  tarjeta.querySelector('.boton-restablecer-codigo').addEventListener('click', function () {
+    restablecerCodigoJugador(jugador);
+  });
+
   var botonEstado = tarjeta.querySelector(estadoActivo ? '.boton-desactivar' : '.boton-reactivar');
   botonEstado.addEventListener('click', function () {
     cambiarEstadoJugador(jugador, estadoActivo ? 'INACTIVO' : 'ACTIVO');
@@ -365,6 +371,30 @@ function crearTarjetaJugador(jugador) {
   tarjeta.insertBefore(crearAvatar(jugador, 'avatar-mediano'), tarjeta.firstChild);
 
   return tarjeta;
+}
+
+/**
+ * El capitán restablece el código de acceso de un jugador (por ejemplo si
+ * lo ha olvidado) al código temporal por defecto.
+ */
+function restablecerCodigoJugador(jugador) {
+  if (!jugador.nombre_usuario) {
+    alert('Este jugador todavía no tiene ningún acceso creado.');
+    return;
+  }
+  if (!confirm('¿Restablecer la contraseña de ' + (jugador.apodo || jugador.nombre_completo) + ' a la temporal por defecto?')) {
+    return;
+  }
+
+  var guardada = obtenerSesionGuardada();
+  llamarApi('restablecerCodigoAcceso', { token: guardada.token, id_jugador: jugador.id_jugador })
+    .then(function (resultado) {
+      if (resultado.ok) {
+        alert('Contraseña restablecida.\n\nUsuario: ' + resultado.nombre_usuario + '\nCódigo temporal: ' + resultado.codigo_nuevo + '\n\nDíselo para que entre y lo cambie por uno propio desde "Mi perfil".');
+      } else {
+        alert(resultado.error || 'No se ha podido restablecer la contraseña.');
+      }
+    });
 }
 
 function cambiarEstadoJugador(jugador, nuevoEstado) {
@@ -454,194 +484,11 @@ function manejarEnvioJugador(evento) {
       if (resultado.ok) {
         cerrarModalJugador();
         cargarJugadores();
+        if (accion === 'crearJugador' && resultado.nombre_usuario) {
+          alert('Jugador creado con su acceso a la app.\n\nUsuario: ' + resultado.nombre_usuario + '\nCódigo temporal: ' + resultado.codigo_acceso + '\n\nDíselo para que entre y lo cambie por uno propio desde "Mi perfil".');
+        }
       } else {
         mensajeError.textContent = resultado.error || 'No se ha podido guardar el jugador.';
-        mensajeError.classList.remove('oculto');
-      }
-    })
-    .catch(function () {
-      mensajeError.textContent = 'No se ha podido conectar con el servidor.';
-      mensajeError.classList.remove('oculto');
-    })
-    .finally(function () {
-      botonGuardar.disabled = false;
-      botonGuardar.textContent = 'Guardar';
-    });
-}
-
-/* ==========================================================================
- * USUARIOS (capitán) — crear accesos y dar/quitar poderes de capitán
- * ======================================================================= */
-
-var ROLES_TEXTO = { CAPITAN: 'Capitán', JUGADOR: 'Jugador' };
-
-function irAVistaUsuarios() {
-  mostrarVista('vista-usuarios');
-  cargarUsuarios();
-}
-
-function cargarUsuarios() {
-  var guardada = obtenerSesionGuardada();
-  var contenedor = document.getElementById('lista-usuarios');
-  var mensaje = document.getElementById('mensaje-usuarios');
-  mensaje.classList.add('oculto');
-  contenedor.innerHTML = '<p class="texto-vacio">Cargando usuarios...</p>';
-
-  llamarApi('listarUsuarios', { token: guardada.token })
-    .then(function (resultado) {
-      if (!resultado.ok) throw new Error(resultado.error || 'No se han podido cargar los usuarios.');
-      pintarUsuarios(resultado.usuarios);
-    })
-    .catch(function (error) {
-      contenedor.innerHTML = '';
-      mensaje.textContent = error.message || 'No se ha podido conectar con el servidor.';
-      mensaje.classList.remove('oculto');
-    });
-}
-
-function pintarUsuarios(usuarios) {
-  var contenedor = document.getElementById('lista-usuarios');
-
-  if (usuarios.length === 0) {
-    contenedor.innerHTML = '<p class="texto-vacio">Todavía no hay usuarios.</p>';
-    return;
-  }
-
-  contenedor.innerHTML = '';
-  usuarios.forEach(function (usuario) {
-    contenedor.appendChild(crearTarjetaUsuario(usuario));
-  });
-}
-
-function crearTarjetaUsuario(usuario) {
-  var tarjeta = document.createElement('div');
-  tarjeta.className = 'jugador-tarjeta';
-  var activo = usuario.estado === 'ACTIVO';
-
-  tarjeta.innerHTML =
-    '<div class="jugador-info">' +
-      '<span class="jugador-nombre"></span>' +
-      '<div class="jugador-meta">' +
-        '<span class="insignia ' + (usuario.rol === 'CAPITAN' ? 'insignia-compat-buena' : 'insignia-posicion') + '"></span>' +
-        '<span class="insignia ' + (activo ? 'insignia-activo' : 'insignia-inactivo') + '"></span>' +
-        (usuario.jugador_nombre ? '<span>· ' + usuario.jugador_nombre + '</span>' : '') +
-      '</div>' +
-    '</div>' +
-    '<div class="jugador-acciones">' +
-      '<button type="button" class="boton-mini boton-editar">Editar</button>' +
-      '<button type="button" class="boton-mini ' + (activo ? 'boton-mini-peligro boton-desactivar' : 'boton-mini-exito boton-reactivar') + '">' +
-        (activo ? 'Desactivar' : 'Reactivar') +
-      '</button>' +
-    '</div>';
-
-  tarjeta.querySelector('.jugador-nombre').textContent = usuario.nombre_usuario;
-  tarjeta.querySelector('.insignia-compat-buena, .insignia-posicion').textContent = ROLES_TEXTO[usuario.rol] || usuario.rol;
-  tarjeta.querySelector(activo ? '.insignia-activo' : '.insignia-inactivo').textContent = activo ? 'Activo' : 'Inactivo';
-
-  tarjeta.querySelector('.boton-editar').addEventListener('click', function () {
-    abrirModalUsuario(usuario);
-  });
-
-  tarjeta.querySelector(activo ? '.boton-desactivar' : '.boton-reactivar').addEventListener('click', function () {
-    guardarCambioUsuario({ id_usuario: usuario.id_usuario, estado: activo ? 'INACTIVO' : 'ACTIVO' }, cargarUsuarios);
-  });
-
-  return tarjeta;
-}
-
-function guardarCambioUsuario(datosParciales, alTerminar) {
-  var guardada = obtenerSesionGuardada();
-  llamarApi('editarUsuario', Object.assign({ token: guardada.token }, datosParciales)).then(function (resultado) {
-    if (resultado.ok) {
-      if (alTerminar) alTerminar();
-    } else {
-      alert(resultado.error || 'No se ha podido guardar el cambio.');
-    }
-  });
-}
-
-function abrirModalUsuario(usuario) {
-  var titulo = document.getElementById('modal-usuario-titulo');
-  var mensajeError = document.getElementById('mensaje-error-usuario');
-  var ayudaCodigo = document.querySelector('.texto-ayuda-codigo');
-  mensajeError.classList.add('oculto');
-  document.getElementById('formulario-usuario').reset();
-
-  var guardada = obtenerSesionGuardada();
-  var selectJugador = document.getElementById('usuario-jugador');
-  selectJugador.innerHTML = '<option value="">Sin vincular</option>';
-
-  llamarApi('listarJugadores', { token: guardada.token }).then(function (resultado) {
-    if (!resultado.ok) return;
-    resultado.jugadores.forEach(function (j) {
-      var opcion = document.createElement('option');
-      opcion.value = j.id_jugador;
-      opcion.textContent = j.apodo || j.nombre_completo;
-      selectJugador.appendChild(opcion);
-    });
-    if (usuario) selectJugador.value = usuario.id_jugador || '';
-  });
-
-  if (usuario) {
-    titulo.textContent = 'Editar usuario';
-    document.getElementById('usuario-id').value = usuario.id_usuario;
-    document.getElementById('usuario-nombre').value = usuario.nombre_usuario;
-    document.getElementById('usuario-codigo').value = '';
-    document.getElementById('usuario-codigo').placeholder = 'Dejar en blanco para no cambiarlo';
-    document.getElementById('usuario-rol').value = usuario.rol;
-    ayudaCodigo.classList.remove('oculto');
-  } else {
-    titulo.textContent = 'Nuevo usuario';
-    document.getElementById('usuario-id').value = '';
-    document.getElementById('usuario-codigo').placeholder = 'Mínimo 4 caracteres';
-    document.getElementById('usuario-rol').value = 'JUGADOR';
-    ayudaCodigo.classList.add('oculto');
-  }
-
-  document.getElementById('modal-usuario').classList.remove('oculto');
-}
-
-function cerrarModalUsuario() {
-  document.getElementById('modal-usuario').classList.add('oculto');
-}
-
-function manejarEnvioUsuario(evento) {
-  evento.preventDefault();
-
-  var guardada = obtenerSesionGuardada();
-  var idUsuario = document.getElementById('usuario-id').value;
-  var botonGuardar = document.getElementById('boton-guardar-usuario');
-  var mensajeError = document.getElementById('mensaje-error-usuario');
-
-  var datos = {
-    token: guardada.token,
-    nombre_usuario: document.getElementById('usuario-nombre').value.trim(),
-    rol: document.getElementById('usuario-rol').value,
-    id_jugador: document.getElementById('usuario-jugador').value
-  };
-  var codigo = document.getElementById('usuario-codigo').value.trim();
-
-  var accion;
-  if (idUsuario) {
-    datos.id_usuario = idUsuario;
-    if (codigo) datos.codigo_acceso = codigo;
-    accion = 'editarUsuario';
-  } else {
-    datos.codigo_acceso = codigo;
-    accion = 'crearUsuario';
-  }
-
-  mensajeError.classList.add('oculto');
-  botonGuardar.disabled = true;
-  botonGuardar.textContent = 'Guardando...';
-
-  llamarApi(accion, datos)
-    .then(function (resultado) {
-      if (resultado.ok) {
-        cerrarModalUsuario();
-        cargarUsuarios();
-      } else {
-        mensajeError.textContent = resultado.error || 'No se ha podido guardar el usuario.';
         mensajeError.classList.remove('oculto');
       }
     })
@@ -1736,7 +1583,8 @@ function cargarPerfil() {
       '<h2 class="titulo-bienvenida"></h2>' +
       '<p class="texto-secundario texto-secundario-posicion"></p>' +
       '<p class="texto-secundario">Puntuación: <strong></strong></p>' +
-      '<p class="texto-secundario texto-secundario-estado"></p>';
+      '<p class="texto-secundario texto-secundario-estado"></p>' +
+      '<p class="texto-secundario texto-secundario-usuario"></p>';
 
     if (yo.apodo) {
       contenedor.querySelector('.etiqueta-rol-apodo').textContent = yo.apodo;
@@ -1747,6 +1595,8 @@ function cargarPerfil() {
     contenedor.querySelector('strong').textContent = Number(yo.puntuacion);
     contenedor.querySelector('.texto-secundario-estado').textContent =
       'Estado: ' + (yo.estado === 'ACTIVO' ? 'Activo ✅' : 'Inactivo');
+    contenedor.querySelector('.texto-secundario-usuario').textContent =
+      'Usuario para entrar: ' + (yo.nombre_usuario || '(pregunta al capitán)');
 
     cargarEstadisticasPerfil(guardada.id_jugador);
   });
@@ -1766,6 +1616,7 @@ function abrirEdicionPerfil() {
   document.getElementById('perfil-posicion-principal').value = principal;
   document.getElementById('perfil-posicion-secundaria-check').checked = !!jugabaAmbas;
   actualizarTextoPosicionSecundaria('perfil-posicion-principal', 'perfil-posicion-secundaria-texto');
+  document.getElementById('perfil-codigo-nuevo').value = '';
   document.getElementById('mensaje-error-perfil-editar').classList.add('oculto');
 
   document.getElementById('boton-editar-perfil').classList.add('oculto');
@@ -1795,6 +1646,12 @@ function manejarGuardarPerfilPropio(evento) {
     posicion_principal: posicionPrincipalPerfil,
     posicion_secundaria: tieneSecundariaPerfil ? posicionContraria(posicionPrincipalPerfil) : ''
   };
+  var codigoNuevo = document.getElementById('perfil-codigo-nuevo').value.trim();
+  if (codigoNuevo && codigoNuevo.length < 4) {
+    mensajeError.textContent = 'La contraseña nueva debe tener al menos 4 caracteres.';
+    mensajeError.classList.remove('oculto');
+    return;
+  }
 
   mensajeError.classList.add('oculto');
   botonGuardar.disabled = true;
@@ -1802,16 +1659,19 @@ function manejarGuardarPerfilPropio(evento) {
 
   llamarApi('editarPerfilPropio', datos)
     .then(function (resultado) {
-      if (resultado.ok) {
-        cerrarEdicionPerfil();
-        cargarPerfil();
-      } else {
-        mensajeError.textContent = resultado.error || 'No se han podido guardar los cambios.';
-        mensajeError.classList.remove('oculto');
-      }
+      if (!resultado.ok) throw new Error(resultado.error || 'No se han podido guardar los cambios.');
+      if (!codigoNuevo) return null;
+      return llamarApi('cambiarMiCodigoAcceso', { token: guardada.token, codigo_nuevo: codigoNuevo });
     })
-    .catch(function () {
-      mensajeError.textContent = 'No se ha podido conectar con el servidor.';
+    .then(function (resultadoCodigo) {
+      if (resultadoCodigo && !resultadoCodigo.ok) {
+        throw new Error(resultadoCodigo.error || 'Los datos se han guardado, pero no se ha podido cambiar la contraseña.');
+      }
+      cerrarEdicionPerfil();
+      cargarPerfil();
+    })
+    .catch(function (error) {
+      mensajeError.textContent = error.message || 'No se ha podido conectar con el servidor.';
       mensajeError.classList.remove('oculto');
     })
     .finally(function () {
@@ -2484,16 +2344,6 @@ document.addEventListener('DOMContentLoaded', function () {
   document.getElementById('perfil-posicion-principal').addEventListener('change', function () {
     actualizarTextoPosicionSecundaria('perfil-posicion-principal', 'perfil-posicion-secundaria-texto');
   });
-
-  document.getElementById('boton-ir-usuarios').addEventListener('click', irAVistaUsuarios);
-  document.getElementById('boton-volver-usuarios').addEventListener('click', function () {
-    mostrarVista('vista-inicio');
-  });
-  document.getElementById('boton-nuevo-usuario').addEventListener('click', function () {
-    abrirModalUsuario(null);
-  });
-  document.getElementById('boton-cancelar-usuario').addEventListener('click', cerrarModalUsuario);
-  document.getElementById('formulario-usuario').addEventListener('submit', manejarEnvioUsuario);
 
   document.getElementById('boton-ir-jornadas').addEventListener('click', irAVistaJornadas);
   document.getElementById('boton-volver-jornadas').addEventListener('click', function () {

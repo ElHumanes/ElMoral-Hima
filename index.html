@@ -80,10 +80,6 @@
           <span class="tarjeta-menu-icono">📅</span>
           <span class="tarjeta-menu-texto">Jornadas</span>
         </button>
-        <button class="tarjeta-menu" id="boton-ir-usuarios">
-          <span class="tarjeta-menu-icono">🔑</span>
-          <span class="tarjeta-menu-texto">Usuarios</span>
-        </button>
         <button class="tarjeta-menu" id="boton-ir-dashboard">
           <span class="tarjeta-menu-icono">📊</span>
           <span class="tarjeta-menu-texto">Estadísticas</span>
@@ -150,24 +146,6 @@
       <div id="lista-jugadores" class="lista-jugadores"></div>
     </section>
 
-    <!-- VISTA: USUARIOS (gestión, solo capitán) -->
-    <section id="vista-usuarios" class="vista oculto">
-      <div class="cabecera-seccion">
-        <button class="boton-volver" id="boton-volver-usuarios">← Volver</button>
-        <h1 class="titulo-seccion">Usuarios</h1>
-      </div>
-
-      <p class="texto-secundario">
-        Aquí puedes crear accesos para los jugadores y dar poderes de capitán a
-        otra persona (podrá hacer todo lo mismo que tú, incluido registrar resultados).
-      </p>
-
-      <button class="boton boton-primario" id="boton-nuevo-usuario">+ Nuevo usuario</button>
-
-      <p id="mensaje-usuarios" class="mensaje-error oculto"></p>
-
-      <div id="lista-usuarios" class="lista-jugadores"></div>
-    </section>
 
     <!-- VISTA: DASHBOARD / ESTADÍSTICAS (solo capitán) -->
     <section id="vista-dashboard" class="vista oculto">
@@ -333,6 +311,9 @@
             <input type="checkbox" id="perfil-posicion-secundaria-check">
             <span id="perfil-posicion-secundaria-texto">También juego en el otro lado</span>
           </label>
+
+          <label class="etiqueta" for="perfil-codigo-nuevo">Cambiar mi contraseña (opcional)</label>
+          <input class="entrada" type="password" id="perfil-codigo-nuevo" placeholder="Déjalo en blanco para no cambiarla" autocomplete="new-password">
 
           <p id="mensaje-error-perfil-editar" class="mensaje-error oculto"></p>
 
@@ -519,41 +500,6 @@
   </div>
 
   <!-- MODAL: crear / editar usuario -->
-  <div id="modal-usuario" class="modal-fondo oculto">
-    <div class="modal-caja">
-      <h2 id="modal-usuario-titulo" class="modal-titulo">Nuevo usuario</h2>
-
-      <form id="formulario-usuario">
-        <input type="hidden" id="usuario-id">
-
-        <label class="etiqueta" for="usuario-nombre">Nombre de usuario</label>
-        <input class="entrada" type="text" id="usuario-nombre" required>
-
-        <label class="etiqueta" for="usuario-codigo">Código de acceso</label>
-        <input class="entrada" type="text" id="usuario-codigo" placeholder="Mínimo 4 caracteres">
-        <p class="texto-secundario texto-ayuda-codigo oculto">Déjalo en blanco para no cambiar el código actual.</p>
-
-        <label class="etiqueta" for="usuario-rol">Rol</label>
-        <select class="entrada" id="usuario-rol" required>
-          <option value="JUGADOR">Jugador</option>
-          <option value="CAPITAN">Capitán (todos los permisos)</option>
-        </select>
-
-        <label class="etiqueta" for="usuario-jugador">Jugador vinculado (opcional)</label>
-        <select class="entrada" id="usuario-jugador">
-          <option value="">Sin vincular</option>
-        </select>
-
-        <p id="mensaje-error-usuario" class="mensaje-error oculto"></p>
-
-        <div class="modal-botones">
-          <button type="button" class="boton boton-secundario" id="boton-cancelar-usuario">Cancelar</button>
-          <button type="submit" class="boton boton-primario" id="boton-guardar-usuario">Guardar</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
   <!-- MODAL: registrar resultado de un partido -->
   <div id="modal-resultado" class="modal-fondo oculto">
     <div class="modal-caja">

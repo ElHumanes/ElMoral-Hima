@@ -125,6 +125,12 @@ function manejarPeticion(e) {
       case 'editarUsuario':
         return respuestaJson(editarUsuario(requerirSesionValida(params.token), params));
 
+      case 'cambiarMiCodigoAcceso':
+        return respuestaJson(cambiarMiCodigoAcceso(requerirSesionValida(params.token), params.codigo_nuevo));
+
+      case 'restablecerCodigoAcceso':
+        return respuestaJson(restablecerCodigoAcceso(requerirSesionValida(params.token), params.id_jugador));
+
       case 'listarRankingJugadores':
         return respuestaOk({ ranking: listarRankingJugadores(requerirSesionValida(params.token)) });
 
@@ -151,6 +157,9 @@ function manejarPeticion(e) {
 
       case 'generarRecomendaciones':
         return respuestaOk({ recomendaciones: generarRecomendaciones(requerirSesionValida(params.token), params.id_jornada) });
+
+      case 'crearAccesosFaltantes':
+        return respuestaJson(crearAccesosFaltantes(requerirSesionValida(params.token)));
 
       case 'previsualizarAlineaciones':
         return respuestaOk({ recomendaciones: previsualizarAlineaciones(requerirSesionValida(params.token), params.ids_jugadores) });

@@ -6,6 +6,9 @@
 
 var DIAS_CADUCIDAD_SESION = 30;
 
+/** Código de acceso con el que se crea (o restablece) automáticamente el usuario de un jugador. */
+var CODIGO_ACCESO_POR_DEFECTO = '12345678';
+
 /**
  * Login. Recibe el nombre de usuario y el código de acceso en texto plano
  * (tal como lo escribe el jugador), y devuelve un token de sesión si es correcto.

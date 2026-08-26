@@ -8,6 +8,74 @@
 
 var ROLES_VALIDOS = ['CAPITAN', 'JUGADOR'];
 
+/**
+ * Genera un nombre de usuario a partir del primer apellido (en minúsculas
+ * y sin acentos, para que sea fácil de escribir). Si ya existe otro
+ * usuario con ese mismo nombre, añade un número al final (ruiz, ruiz2...).
+ */
+function generarNombreUsuarioUnico(apellidos) {
+  var primerApellido = (apellidos || '').trim().split(/\s+/)[0] || 'jugador';
+  var base = primerApellido
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '') || 'jugador';
+
+  var nombresExistentes = {};
+  leerFilas('USUARIOS').forEach(function (u) { nombresExistentes[String(u.nombre_usuario).toLowerCase()] = true; });
+
+  if (!nombresExistentes[base]) return base;
+
+  var contador = 2;
+  while (nombresExistentes[base + contador]) contador++;
+  return base + contador;
+}
+
+/**
+ * El propio jugador cambia su código de acceso (no requiere ser capitán,
+ * solo estar identificado). No hace falta repetir el código actual: con la
+ * sesión activa ya basta, igual que para el resto de cambios de "Editar mis datos".
+ */
+function cambiarMiCodigoAcceso(sesion, codigoNuevo) {
+  if (!sesion.id_usuario) throw new Error('Sesión no válida.');
+  var codigo = (codigoNuevo || '').trim();
+  if (codigo.length < 4) throw new Error('El código de acceso debe tener al menos 4 caracteres.');
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    actualizarFila('USUARIOS', 'id_usuario', sesion.id_usuario, { codigo_acceso_hash: hashTexto(codigo) });
+    registrarLog(sesion.id_usuario, 'CAMBIAR_CODIGO_ACCESO', 'Cambio de código propio');
+  } finally {
+    lock.releaseLock();
+  }
+
+  return { ok: true };
+}
+
+/**
+ * El capitán restablece el código de acceso de un jugador (por si lo ha
+ * perdido) al código temporal por defecto, para que pueda volver a entrar
+ * y cambiarlo por uno propio.
+ */
+function restablecerCodigoAcceso(sesion, idJugador) {
+  requerirCapitan(sesion);
+  if (!idJugador) throw new Error('Falta el identificador del jugador.');
+
+  var usuario = leerFilas('USUARIOS').filter(function (u) { return u.id_jugador === idJugador; })[0];
+  if (!usuario) throw new Error('Ese jugador todavía no tiene ningún acceso creado.');
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    actualizarFila('USUARIOS', 'id_usuario', usuario.id_usuario, { codigo_acceso_hash: hashTexto(CODIGO_ACCESO_POR_DEFECTO) });
+    registrarLog(sesion.id_usuario, 'RESTABLECER_CODIGO', usuario.nombre_usuario);
+  } finally {
+    lock.releaseLock();
+  }
+
+  return { ok: true, nombre_usuario: usuario.nombre_usuario, codigo_nuevo: CODIGO_ACCESO_POR_DEFECTO };
+}
+
 function listarUsuarios(sesion) {
   requerirCapitan(sesion);
 
