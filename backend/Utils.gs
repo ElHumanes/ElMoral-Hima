@@ -5,27 +5,41 @@
 
 var PROP_SPREADSHEET_ID = 'SPREADSHEET_ID';
 
+// Caché en memoria del Spreadsheet y sus pestañas, válida solo durante esta
+// misma ejecución (cada doGet/doPost es una ejecución nueva, así que no hay
+// riesgo de servir datos obsoletos entre peticiones distintas). Sin esta
+// caché, cada leerFilas/agregarFila/actualizarFila volvía a abrir la hoja de
+// cálculo entera desde cero — con varias llamadas por petición (por ejemplo,
+// validar la sesión y luego leer JUGADORES), eso multiplicaba muchísimo el
+// tiempo de respuesta.
+var _spreadsheetCache = null;
+var _sheetCache = {};
+
 /**
  * Devuelve el Spreadsheet configurado en las Propiedades del proyecto.
  * El ID nunca se escribe en el código fuente (que se sube a GitHub más adelante
  * solo como referencia, nunca este proyecto de Apps Script en sí).
  */
 function getSpreadsheet() {
+  if (_spreadsheetCache) return _spreadsheetCache;
   var id = PropertiesService.getScriptProperties().getProperty(PROP_SPREADSHEET_ID);
   if (!id) {
     throw new Error('Falta configurar la propiedad SPREADSHEET_ID en Configuración > Propiedades del proyecto.');
   }
-  return SpreadsheetApp.openById(id);
+  _spreadsheetCache = SpreadsheetApp.openById(id);
+  return _spreadsheetCache;
 }
 
 /**
  * Devuelve la hoja (pestaña) con ese nombre exacto, o lanza un error claro si no existe.
  */
 function getSheet(nombreHoja) {
+  if (_sheetCache[nombreHoja]) return _sheetCache[nombreHoja];
   var hoja = getSpreadsheet().getSheetByName(nombreHoja);
   if (!hoja) {
     throw new Error('No existe la pestaña "' + nombreHoja + '" en la hoja de cálculo.');
   }
+  _sheetCache[nombreHoja] = hoja;
   return hoja;
 }
 
