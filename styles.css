@@ -325,6 +325,19 @@ body {
   object-fit: contain;
 }
 
+/* Los logos cuadrados (con más margen en blanco alrededor del dibujo) se
+   ven pequeños si se ajustan a la misma altura que los logos apaisados;
+   se les da más espacio para que tengan un tamaño visual comparable. */
+.patrocinador-tarjeta--grande {
+  height: 72px;
+  padding: 8px 10px;
+}
+
+.patrocinador-tarjeta--grande img {
+  max-height: 60px;
+  max-width: 60px;
+}
+
 /* Menú de acciones del capitán (pantalla de inicio) */
 .menu-tarjetas {
   display: flex;
