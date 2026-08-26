@@ -11,7 +11,7 @@
  *   directas a la red, para que los datos estén siempre al día.
  */
 
-var CACHE_NOMBRE = 'padel-app-cache-v3';
+var CACHE_NOMBRE = 'padel-app-cache-v4';
 
 var ARCHIVOS_PARA_CACHEAR = [
   './',
@@ -24,6 +24,7 @@ var ARCHIVOS_PARA_CACHEAR = [
   './assets/logo-hima.png',
   './assets/logo-cocinadelsur.jpg',
   './assets/logo-baron.png',
+  './assets/logo-opticalajara.jpg',
   './assets/icon-192.png',
   './assets/icon-512.png',
   './assets/icon-maskable-512.png'
