@@ -83,11 +83,21 @@ function cambiarEstadoJornada(sesion, idJornada, nuevoEstado) {
     throw new Error('Estado de jornada no válido.');
   }
 
+  var jornadaAntes = leerFilas('JORNADAS').filter(function (j) { return j.id_jornada === idJornada; })[0];
+
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
   var actualizado;
   try {
-    actualizado = actualizarFila('JORNADAS', 'id_jornada', idJornada, { estado: nuevoEstado });
+    var cambios = { estado: nuevoEstado };
+    if (nuevoEstado === 'CONVOCATORIA_ABIERTA') {
+      // Se guarda cuándo se abrió, para poder mandar el recordatorio a los
+      // pocos días, y se resetea por si esta jornada ya tuvo una convocatoria
+      // abierta antes (poco probable, pero así no se salta el recordatorio).
+      cambios.fecha_apertura_convocatoria = ahoraIso();
+      cambios.recordatorio_enviado = '';
+    }
+    actualizado = actualizarFila('JORNADAS', 'id_jornada', idJornada, cambios);
     if (actualizado) {
       registrarLog(sesion.id_usuario, 'CAMBIAR_ESTADO_JORNADA', idJornada + ' -> ' + nuevoEstado);
     }
@@ -96,5 +106,14 @@ function cambiarEstadoJornada(sesion, idJornada, nuevoEstado) {
   }
 
   if (!actualizado) throw new Error('No se ha encontrado esa jornada.');
+
+  if (nuevoEstado === 'CONVOCATORIA_ABIERTA' && jornadaAntes) {
+    try {
+      enviarAvisoConvocatoriaAbierta(jornadaAntes);
+    } catch (err) {
+      Logger.log('No se han podido enviar los avisos de convocatoria abierta: ' + err.message);
+    }
+  }
+
   return { ok: true };
 }

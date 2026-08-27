@@ -159,6 +159,18 @@ function vaciarHoja(nombreHoja) {
   }
 }
 
+/**
+ * Añade una columna nueva al final de una pestaña si todavía no existe
+ * (comparando por el nombre de la cabecera). No hace nada si ya está.
+ */
+function agregarColumnaSiFalta(nombreHoja, nombreColumna) {
+  var hoja = getSheet(nombreHoja);
+  var ultimaColumna = hoja.getLastColumn();
+  var cabeceras = ultimaColumna > 0 ? hoja.getRange(1, 1, 1, ultimaColumna).getValues()[0] : [];
+  if (cabeceras.indexOf(nombreColumna) !== -1) return;
+  hoja.getRange(1, ultimaColumna + 1).setValue(nombreColumna);
+}
+
 /** Genera un identificador único (UUID). Gratuito, nativo de Apps Script. */
 function generarId() {
   return Utilities.getUuid();

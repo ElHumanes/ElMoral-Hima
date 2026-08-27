@@ -454,6 +454,7 @@ function abrirModalJugador(jugador) {
     document.getElementById('jugador-nombre').value = jugador.nombre;
     document.getElementById('jugador-apellidos').value = jugador.apellidos;
     document.getElementById('jugador-apodo').value = jugador.apodo || '';
+    document.getElementById('jugador-email').value = jugador.email || '';
     // "AMBAS" ya no es válido, pero un jugador antiguo sin migrar puede
     // seguir teniéndolo guardado: se trata como si jugara los dos lados.
     var principal = jugador.posicion_principal === 'AMBAS' ? 'DERECHA' : jugador.posicion_principal;
@@ -492,6 +493,7 @@ function manejarEnvioJugador(evento) {
     nombre: document.getElementById('jugador-nombre').value.trim(),
     apellidos: document.getElementById('jugador-apellidos').value.trim(),
     apodo: document.getElementById('jugador-apodo').value.trim(),
+    email: document.getElementById('jugador-email').value.trim(),
     posicion_principal: posicionPrincipal,
     posicion_secundaria: tieneSecundaria ? posicionContraria(posicionPrincipal) : '',
     puntuacion: document.getElementById('jugador-puntuacion').value
@@ -1640,6 +1642,7 @@ function abrirEdicionPerfil() {
   document.getElementById('perfil-nombre').value = perfilActual.nombre;
   document.getElementById('perfil-apellidos').value = perfilActual.apellidos;
   document.getElementById('perfil-apodo').value = perfilActual.apodo || '';
+  document.getElementById('perfil-email').value = perfilActual.email || '';
   var principal = perfilActual.posicion_principal === 'AMBAS' ? 'DERECHA' : perfilActual.posicion_principal;
   var jugabaAmbas = perfilActual.posicion_principal === 'AMBAS' || perfilActual.posicion_secundaria === 'AMBAS' ||
     (perfilActual.posicion_secundaria && perfilActual.posicion_secundaria !== principal);
@@ -1673,6 +1676,7 @@ function manejarGuardarPerfilPropio(evento) {
     nombre: document.getElementById('perfil-nombre').value.trim(),
     apellidos: document.getElementById('perfil-apellidos').value.trim(),
     apodo: document.getElementById('perfil-apodo').value.trim(),
+    email: document.getElementById('perfil-email').value.trim(),
     posicion_principal: posicionPrincipalPerfil,
     posicion_secundaria: tieneSecundariaPerfil ? posicionContraria(posicionPrincipalPerfil) : ''
   };

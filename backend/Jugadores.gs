@@ -24,6 +24,13 @@ function validarPosiciones(posicionPrincipal, posicionSecundaria) {
   }
 }
 
+/** Valida un email si se ha indicado alguno (el campo es opcional). */
+function validarEmailOpcional(email) {
+  if (email && email.indexOf('@') === -1) {
+    throw new Error('El email no parece válido.');
+  }
+}
+
 function listarJugadores() {
   var usuarioPorJugador = {};
   leerFilas('USUARIOS').forEach(function (u) {
@@ -45,6 +52,7 @@ function listarJugadores() {
       id_temporada: j.id_temporada,
       fecha_alta: j.fecha_alta,
       foto_url: j.foto_url || '',
+      email: j.email || '',
       nombre_usuario: usuario ? usuario.nombre_usuario : ''
     };
   });
@@ -59,10 +67,12 @@ function crearJugador(sesion, datos) {
   var posicionPrincipal = (datos.posicion_principal || '').trim();
   var posicionSecundaria = (datos.posicion_secundaria || '').trim();
   var puntuacion = Number(datos.puntuacion);
+  var email = (datos.email || '').trim();
 
   if (!nombre) throw new Error('El nombre es obligatorio.');
   if (!apellidos) throw new Error('Los apellidos son obligatorios.');
   validarPosiciones(posicionPrincipal, posicionSecundaria);
+  validarEmailOpcional(email);
   if (isNaN(puntuacion) || puntuacion < 0) {
     throw new Error('La puntuación debe ser un número igual o mayor que 0.');
   }
@@ -83,7 +93,8 @@ function crearJugador(sesion, datos) {
       puntuacion: puntuacion,
       estado: 'ACTIVO',
       id_temporada: obtenerOCrearTemporadaActual(),
-      fecha_alta: ahoraIso()
+      fecha_alta: ahoraIso(),
+      email: email
     });
 
     // Cada jugador nuevo tiene ya de entrada un acceso a la app: usuario a
@@ -121,10 +132,12 @@ function editarJugador(sesion, datos) {
   var posicionPrincipal = (datos.posicion_principal || '').trim();
   var posicionSecundaria = (datos.posicion_secundaria || '').trim();
   var puntuacion = Number(datos.puntuacion);
+  var email = (datos.email || '').trim();
 
   if (!nombre) throw new Error('El nombre es obligatorio.');
   if (!apellidos) throw new Error('Los apellidos son obligatorios.');
   validarPosiciones(posicionPrincipal, posicionSecundaria);
+  validarEmailOpcional(email);
   if (isNaN(puntuacion) || puntuacion < 0) {
     throw new Error('La puntuación debe ser un número igual o mayor que 0.');
   }
@@ -140,7 +153,8 @@ function editarJugador(sesion, datos) {
       apodo: apodo,
       posicion_principal: posicionPrincipal,
       posicion_secundaria: posicionSecundaria,
-      puntuacion: puntuacion
+      puntuacion: puntuacion,
+      email: email
     });
     if (actualizado) {
       registrarLog(sesion.id_usuario, 'EDITAR_JUGADOR', nombre + ' ' + apellidos);
@@ -168,10 +182,12 @@ function editarPerfilPropio(sesion, datos) {
   var apodo = (datos.apodo || '').trim();
   var posicionPrincipal = (datos.posicion_principal || '').trim();
   var posicionSecundaria = (datos.posicion_secundaria || '').trim();
+  var email = (datos.email || '').trim();
 
   if (!nombre) throw new Error('El nombre es obligatorio.');
   if (!apellidos) throw new Error('Los apellidos son obligatorios.');
   validarPosiciones(posicionPrincipal, posicionSecundaria);
+  validarEmailOpcional(email);
 
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
@@ -183,7 +199,8 @@ function editarPerfilPropio(sesion, datos) {
       nombre_completo: nombre + ' ' + apellidos,
       apodo: apodo,
       posicion_principal: posicionPrincipal,
-      posicion_secundaria: posicionSecundaria
+      posicion_secundaria: posicionSecundaria,
+      email: email
     });
     if (actualizado) {
       registrarLog(sesion.id_usuario, 'EDITAR_PERFIL_PROPIO', nombre + ' ' + apellidos);
