@@ -63,7 +63,7 @@ function enviarAvisoConvocatoriaAbierta(jornada) {
     var cuerpo = 'Hola ' + (j.apodo || j.nombre) + ',\n\n' +
       'Se ha abierto una nueva convocatoria:\n' + notifTextoJornada(jornada) + '\n\n' +
       'Entra en la app para decir si te apuntas:\n' + NOTIF_APP_URL + '\n\n' +
-      '— Club de Pádel El Moral';
+      '— El Moral - Hima';
     try {
       GmailApp.sendEmail(j.email, asunto, cuerpo, { from: NOTIF_EMAIL_REMITENTE, name: NOTIF_NOMBRE_REMITENTE });
     } catch (err) {
@@ -101,7 +101,7 @@ function enviarRecordatoriosConvocatoria() {
       var cuerpo = 'Hola ' + (j.apodo || j.nombre) + ',\n\n' +
         'Todavía no has respondido a esta convocatoria:\n' + notifTextoJornada(jornada) + '\n\n' +
         'Entra en la app para decir si te apuntas o no:\n' + NOTIF_APP_URL + '\n\n' +
-        '— Club de Pádel El Moral';
+        '— El Moral - Hima';
       try {
         GmailApp.sendEmail(j.email, asunto, cuerpo, { from: NOTIF_EMAIL_REMITENTE, name: NOTIF_NOMBRE_REMITENTE });
       } catch (err) {
