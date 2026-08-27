@@ -23,6 +23,12 @@ var NOTIF_APP_URL = 'https://elhumanes.github.io/padel-app/';
 var NOTIF_DIAS_PARA_RECORDATORIO = 2;
 var NOTIF_EMAIL_PRUEBA = 'info@hima.es';
 
+// Los avisos salen desde este alias verificado (Gmail > Configuración >
+// Cuentas e importación > Enviar correo como), no desde la cuenta del
+// proyecto, para que se vean más "de club" y no de una cuenta personal.
+var NOTIF_EMAIL_REMITENTE = 'humanes80@gmail.com';
+var NOTIF_NOMBRE_REMITENTE = 'Club de Pádel El Moral';
+
 function jugadoresActivosConEmail() {
   return leerFilas('JUGADORES').filter(function (j) {
     return j.estado === 'ACTIVO' && j.email && String(j.email).indexOf('@') !== -1;
@@ -59,7 +65,7 @@ function enviarAvisoConvocatoriaAbierta(jornada) {
       'Entra en la app para decir si te apuntas:\n' + NOTIF_APP_URL + '\n\n' +
       '— Club de Pádel El Moral';
     try {
-      MailApp.sendEmail(j.email, asunto, cuerpo);
+      GmailApp.sendEmail(j.email, asunto, cuerpo, { from: NOTIF_EMAIL_REMITENTE, name: NOTIF_NOMBRE_REMITENTE });
     } catch (err) {
       Logger.log('No se ha podido avisar por email a ' + j.nombre_completo + ': ' + err.message);
     }
@@ -97,7 +103,7 @@ function enviarRecordatoriosConvocatoria() {
         'Entra en la app para decir si te apuntas o no:\n' + NOTIF_APP_URL + '\n\n' +
         '— Club de Pádel El Moral';
       try {
-        MailApp.sendEmail(j.email, asunto, cuerpo);
+        GmailApp.sendEmail(j.email, asunto, cuerpo, { from: NOTIF_EMAIL_REMITENTE, name: NOTIF_NOMBRE_REMITENTE });
       } catch (err) {
         Logger.log('No se ha podido enviar recordatorio a ' + j.nombre_completo + ': ' + err.message);
       }
@@ -133,4 +139,22 @@ function autorizarYCrearDisparadorRecordatorios() {
   }
 
   Logger.log('Autorización concedida. Disparador diario de recordatorios creado (todos los días a las 10:00).');
+}
+
+/**
+ * PASO ÚNICO A MANO (solo si ya tenías autorizado MailApp y has cambiado a
+ * enviar como humanes80@gmail.com): usar GmailApp con un remitente distinto
+ * pide un permiso nuevo, más amplio que el de MailApp. Ejecutar esta función
+ * una vez desde el editor; sin try/catch a propósito, para que si falta
+ * autorización, Apps Script muestre aquí la pantalla para concederla.
+ * Manda un correo de prueba de verdad desde humanes80@gmail.com.
+ */
+function autorizarEnvioComoHumanes80() {
+  GmailApp.sendEmail(
+    NOTIF_EMAIL_PRUEBA,
+    'Prueba: avisos ahora desde ' + NOTIF_EMAIL_REMITENTE,
+    'Este correo confirma que la app ya puede enviar los avisos de convocatoria como "' + NOTIF_NOMBRE_REMITENTE + '" desde ' + NOTIF_EMAIL_REMITENTE + '. Todo listo.',
+    { from: NOTIF_EMAIL_REMITENTE, name: NOTIF_NOMBRE_REMITENTE }
+  );
+  Logger.log('Autorización concedida. Los avisos ya se envían desde ' + NOTIF_EMAIL_REMITENTE + '.');
 }
