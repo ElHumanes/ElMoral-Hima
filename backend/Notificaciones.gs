@@ -27,7 +27,7 @@ var NOTIF_EMAIL_PRUEBA = 'info@hima.es';
 // Cuentas e importación > Enviar correo como), no desde la cuenta del
 // proyecto, para que se vean más "de club" y no de una cuenta personal.
 var NOTIF_EMAIL_REMITENTE = 'humanes80@gmail.com';
-var NOTIF_NOMBRE_REMITENTE = 'Club de Pádel El Moral';
+var NOTIF_NOMBRE_REMITENTE = 'El Moral - Hima';
 
 function jugadoresActivosConEmail() {
   return leerFilas('JUGADORES').filter(function (j) {
