@@ -2421,6 +2421,7 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
   document.getElementById('boton-ir-clasificacion').addEventListener('click', irAVistaClasificacion);
+  document.getElementById('boton-ir-clasificacion-capitan').addEventListener('click', irAVistaClasificacion);
   document.getElementById('boton-volver-clasificacion').addEventListener('click', function () {
     mostrarVista('vista-inicio');
   });
