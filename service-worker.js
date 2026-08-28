@@ -11,7 +11,7 @@
  *   directas a la red, para que los datos estén siempre al día.
  */
 
-var CACHE_NOMBRE = 'padel-app-cache-v4';
+var CACHE_NOMBRE = 'padel-app-cache-v5';
 
 var ARCHIVOS_PARA_CACHEAR = [
   './',
@@ -76,9 +76,12 @@ self.addEventListener('fetch', function (evento) {
   }
 
   if (esArchivoEsqueleto(url.pathname) || evento.request.mode === 'navigate') {
-    // Esqueleto de la app: red primero, caché como respaldo sin conexión.
+    // Esqueleto de la app: red primero (sin pasar por la caché HTTP del
+    // navegador, para que una actualización no se quede escondida detrás de
+    // una copia que el propio navegador decidió guardar), caché del Service
+    // Worker como respaldo sin conexión.
     evento.respondWith(
-      fetch(evento.request)
+      fetch(evento.request, { cache: 'no-store' })
         .then(function (respuestaRed) {
           var copia = respuestaRed.clone();
           caches.open(CACHE_NOMBRE).then(function (cache) { cache.put(evento.request, copia); });
