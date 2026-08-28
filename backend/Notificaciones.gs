@@ -19,7 +19,7 @@ function configurarColumnasNotificaciones() {
   Logger.log('Columnas de notificaciones comprobadas/añadidas.');
 }
 
-var NOTIF_APP_URL = 'https://elhumanes.github.io/elmoral-hima/';
+var NOTIF_APP_URL = 'https://elhumanes.github.io/ElMoral-Hima/';
 // URL del despliegue de producción, para los enlaces de "confirmar asistencia
 // con un clic" dentro del email (deben apuntar siempre aquí, nunca al @HEAD
 // de desarrollo).
