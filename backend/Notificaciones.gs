@@ -35,7 +35,7 @@ var NOTIF_NOMBRE_REMITENTE = 'El Moral - Hima';
 
 function jugadoresActivosConEmail() {
   return leerFilas('JUGADORES').filter(function (j) {
-    return j.estado === 'ACTIVO' && j.email && String(j.email).indexOf('@') !== -1;
+    return j.estado === 'ACTIVO' && j.no_convocable !== true && j.email && String(j.email).indexOf('@') !== -1;
   });
 }
 

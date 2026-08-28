@@ -70,8 +70,16 @@ function login(nombreUsuario, codigoAcceso) {
     rol: usuario.rol,
     id_usuario: usuario.id_usuario,
     id_jugador: usuario.id_jugador,
-    nombre_usuario: usuario.nombre_usuario
+    nombre_usuario: usuario.nombre_usuario,
+    apodo: obtenerApodoDeJugador(usuario.id_jugador)
   };
+}
+
+/** Apodo del jugador ligado a un usuario, o '' si no tiene ficha o apodo. */
+function obtenerApodoDeJugador(idJugador) {
+  if (!idJugador) return '';
+  var jugador = leerFilas('JUGADORES').filter(function (j) { return j.id_jugador === idJugador; })[0];
+  return jugador ? (jugador.apodo || '') : '';
 }
 
 /**
@@ -96,7 +104,8 @@ function validarSesion(token) {
     id_usuario: usuario.id_usuario,
     id_jugador: usuario.id_jugador,
     rol: usuario.rol,
-    nombre_usuario: usuario.nombre_usuario
+    nombre_usuario: usuario.nombre_usuario,
+    apodo: obtenerApodoDeJugador(usuario.id_jugador)
   };
 }
 

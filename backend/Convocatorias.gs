@@ -14,7 +14,7 @@ var DISPONIBILIDAD_VALIDA = ['ME_APUNTO', 'NO_PUEDO'];
 function listarConvocatoria(idJornada) {
   if (!idJornada) throw new Error('Falta el identificador de la jornada.');
 
-  var jugadores = leerFilas('JUGADORES').filter(function (j) { return j.estado === 'ACTIVO'; });
+  var jugadores = leerFilas('JUGADORES').filter(function (j) { return j.estado === 'ACTIVO' && j.no_convocable !== true; });
   var respuestas = leerFilas('CONVOCATORIAS').filter(function (c) { return c.id_jornada === idJornada; });
 
   var respuestaPorJugador = {};
@@ -100,7 +100,7 @@ function obtenerResumenInicio(sesion) {
   if (sesion.rol === 'CAPITAN') {
     if (abiertas.length === 0) return { rol: 'CAPITAN', convocatorias: [] };
 
-    var jugadoresActivos = leerFilas('JUGADORES').filter(function (j) { return j.estado === 'ACTIVO'; });
+    var jugadoresActivos = leerFilas('JUGADORES').filter(function (j) { return j.estado === 'ACTIVO' && j.no_convocable !== true; });
     var todasRespuestas = leerFilas('CONVOCATORIAS');
 
     var convocatorias = abiertas.map(function (jornada) {
@@ -136,6 +136,11 @@ function obtenerResumenInicio(sesion) {
 
   // JUGADOR
   if (abiertas.length === 0) return { rol: 'JUGADOR', convocatoria: null };
+
+  if (sesion.id_jugador) {
+    var miFicha = leerFilas('JUGADORES').filter(function (j) { return j.id_jugador === sesion.id_jugador; })[0];
+    if (miFicha && miFicha.no_convocable === true) return { rol: 'JUGADOR', convocatoria: null };
+  }
 
   var abierta = abiertas[0];
   var miRespuesta = 'PENDIENTE';

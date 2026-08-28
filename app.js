@@ -177,7 +177,7 @@ function borrarSesionGuardada() {
 function mostrarInicio(datosUsuario) {
   sesionActual = datosUsuario;
 
-  document.getElementById('texto-nombre-usuario').textContent = datosUsuario.nombre_usuario;
+  document.getElementById('texto-nombre-usuario').textContent = datosUsuario.apodo || datosUsuario.nombre_usuario;
   document.getElementById('etiqueta-rol').textContent = datosUsuario.rol;
   document.getElementById('menu-capitan').classList.toggle('oculto', datosUsuario.rol !== 'CAPITAN');
   document.getElementById('menu-jugador').classList.toggle('oculto', datosUsuario.rol !== 'JUGADOR');
@@ -364,6 +364,7 @@ function crearTarjetaJugador(jugador) {
       '<div class="jugador-meta">' +
         '<span class="insignia insignia-posicion"></span>' +
         '<span class="insignia ' + (estadoActivo ? 'insignia-activo' : 'insignia-inactivo') + '"></span>' +
+        (jugador.no_convocable ? '<span class="insignia insignia-inactivo">No convocable</span>' : '') +
         '<span>· Puntuación: ' + Number(jugador.puntuacion) + '</span>' +
         '<span>· Usuario: <strong>' + (jugador.nombre_usuario || 'sin acceso') + '</strong></span>' +
       '</div>' +
@@ -464,10 +465,12 @@ function abrirModalJugador(jugador) {
     document.getElementById('jugador-posicion-principal').value = principal;
     document.getElementById('jugador-posicion-secundaria-check').checked = !!jugabaAmbas;
     document.getElementById('jugador-puntuacion').value = jugador.puntuacion;
+    document.getElementById('jugador-no-convocable').checked = !!jugador.no_convocable;
   } else {
     titulo.textContent = 'Nuevo jugador';
     document.getElementById('jugador-id').value = '';
     document.getElementById('jugador-puntuacion').value = 0;
+    document.getElementById('jugador-no-convocable').checked = false;
   }
 
   actualizarTextoPosicionSecundaria('jugador-posicion-principal', 'jugador-posicion-secundaria-texto');
@@ -498,7 +501,8 @@ function manejarEnvioJugador(evento) {
     telefono: document.getElementById('jugador-telefono').value.trim(),
     posicion_principal: posicionPrincipal,
     posicion_secundaria: tieneSecundaria ? posicionContraria(posicionPrincipal) : '',
-    puntuacion: document.getElementById('jugador-puntuacion').value
+    puntuacion: document.getElementById('jugador-puntuacion').value,
+    no_convocable: document.getElementById('jugador-no-convocable').checked
   };
 
   mensajeError.classList.add('oculto');

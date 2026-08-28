@@ -61,6 +61,7 @@ function listarJugadores() {
       foto_url: j.foto_url || '',
       email: j.email || '',
       telefono: j.telefono || '',
+      no_convocable: j.no_convocable === true,
       nombre_usuario: usuario ? usuario.nombre_usuario : ''
     };
   });
@@ -77,6 +78,7 @@ function crearJugador(sesion, datos) {
   var puntuacion = Number(datos.puntuacion);
   var email = (datos.email || '').trim();
   var telefono = (datos.telefono || '').trim();
+  var noConvocable = !!datos.no_convocable;
 
   if (!nombre) throw new Error('El nombre es obligatorio.');
   if (!apellidos) throw new Error('Los apellidos son obligatorios.');
@@ -105,7 +107,8 @@ function crearJugador(sesion, datos) {
       id_temporada: obtenerOCrearTemporadaActual(),
       fecha_alta: ahoraIso(),
       email: email,
-      telefono: telefono
+      telefono: telefono,
+      no_convocable: noConvocable
     });
 
     // Cada jugador nuevo tiene ya de entrada un acceso a la app: usuario a
@@ -145,6 +148,7 @@ function editarJugador(sesion, datos) {
   var puntuacion = Number(datos.puntuacion);
   var email = (datos.email || '').trim();
   var telefono = (datos.telefono || '').trim();
+  var noConvocable = !!datos.no_convocable;
 
   if (!nombre) throw new Error('El nombre es obligatorio.');
   if (!apellidos) throw new Error('Los apellidos son obligatorios.');
@@ -168,7 +172,8 @@ function editarJugador(sesion, datos) {
       posicion_secundaria: posicionSecundaria,
       puntuacion: puntuacion,
       email: email,
-      telefono: telefono
+      telefono: telefono,
+      no_convocable: noConvocable
     });
     if (actualizado) {
       registrarLog(sesion.id_usuario, 'EDITAR_JUGADOR', nombre + ' ' + apellidos);
