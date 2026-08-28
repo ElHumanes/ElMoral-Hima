@@ -176,6 +176,24 @@ function generarId() {
   return Utilities.getUuid();
 }
 
+var PROP_SECRETO_ENLACES = 'SECRETO_ENLACES';
+
+/**
+ * Clave secreta usada para firmar los enlaces de un solo clic (confirmar
+ * asistencia desde el email sin tener que iniciar sesión). Se genera sola la
+ * primera vez que hace falta y se guarda en las Propiedades del proyecto, así
+ * que nunca queda escrita en el código ni hay que configurar nada a mano.
+ */
+function obtenerSecretoEnlaces() {
+  var props = PropertiesService.getScriptProperties();
+  var secreto = props.getProperty(PROP_SECRETO_ENLACES);
+  if (!secreto) {
+    secreto = Utilities.getUuid() + Utilities.getUuid();
+    props.setProperty(PROP_SECRETO_ENLACES, secreto);
+  }
+  return secreto;
+}
+
 /** Fecha y hora actual en formato ISO 8601, para guardar en las hojas. */
 function ahoraIso() {
   return new Date().toISOString();
@@ -205,4 +223,9 @@ function respuestaOk(datos) {
 
 function respuestaError(mensaje) {
   return respuestaJson({ ok: false, error: mensaje });
+}
+
+/** Construye una respuesta HTML (para páginas abiertas directamente en el navegador, no llamadas de la app). */
+function respuestaHtml(html) {
+  return HtmlService.createHtmlOutput(html);
 }

@@ -168,6 +168,9 @@ function manejarPeticion(e) {
       case 'previsualizarAlineaciones':
         return respuestaOk({ recomendaciones: previsualizarAlineaciones(requerirSesionValida(params.token), params.ids_jugadores) });
 
+      case 'confirmarAsistencia':
+        return confirmarAsistenciaPorEnlace(params);
+
       default:
         return respuestaError('Acción no reconocida: "' + action + '"');
     }

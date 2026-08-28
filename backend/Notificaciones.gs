@@ -20,6 +20,10 @@ function configurarColumnasNotificaciones() {
 }
 
 var NOTIF_APP_URL = 'https://elhumanes.github.io/padel-app/';
+// URL del despliegue de producción, para los enlaces de "confirmar asistencia
+// con un clic" dentro del email (deben apuntar siempre aquí, nunca al @HEAD
+// de desarrollo).
+var NOTIF_API_URL = 'https://script.google.com/macros/s/AKfycbyNesOIcXqUElt02t1eCSDdTJSJwcQN6Rr_lnUgpz2rjibh1qHHrLRPwQdciWANpXhj/exec';
 var NOTIF_DIAS_PARA_RECORDATORIO = 2;
 var NOTIF_EMAIL_PRUEBA = 'info@hima.es';
 
@@ -48,6 +52,17 @@ function notifFormatearFecha(fechaIso) {
   return partes[2] + '/' + partes[1] + '/' + partes[0];
 }
 
+/** Enlaces de "sí voy" / "no puedo" de un clic para incluir en el email de un jugador concreto. */
+function notifEnlacesRespuesta(idJugador, idJornada) {
+  var token = tokenRespuestaEnlace(idJugador, idJornada);
+  var base = NOTIF_API_URL + '?action=confirmarAsistencia' +
+    '&jug=' + encodeURIComponent(idJugador) +
+    '&jor=' + encodeURIComponent(idJornada) +
+    '&tok=' + encodeURIComponent(token) +
+    '&resp=';
+  return { si: base + 'SI', no: base + 'NO' };
+}
+
 /**
  * Avisa a todos los jugadores activos con email de que se ha abierto una
  * convocatoria nueva. La llama automáticamente cambiarEstadoJornada al
@@ -60,9 +75,13 @@ function enviarAvisoConvocatoriaAbierta(jornada) {
 
   var asunto = '🎾 Nueva convocatoria: ' + notifTextoJornada(jornada);
   jugadores.forEach(function (j) {
+    var enlaces = notifEnlacesRespuesta(j.id_jugador, jornada.id_jornada);
     var cuerpo = 'Hola ' + (j.apodo || j.nombre) + ',\n\n' +
       'Se ha abierto una nueva convocatoria:\n' + notifTextoJornada(jornada) + '\n\n' +
-      'Entra en la app para decir si te apuntas:\n' + NOTIF_APP_URL + '\n\n' +
+      'Responde con un solo clic:\n' +
+      '✅ Sí, voy: ' + enlaces.si + '\n' +
+      '❌ No puedo: ' + enlaces.no + '\n\n' +
+      'O entra en la app:\n' + NOTIF_APP_URL + '\n\n' +
       '— El Moral - Hima';
     try {
       GmailApp.sendEmail(j.email, asunto, cuerpo, { from: NOTIF_EMAIL_REMITENTE, name: NOTIF_NOMBRE_REMITENTE });
@@ -98,9 +117,13 @@ function enviarRecordatoriosConvocatoria() {
     var asunto = '⏰ Recordatorio: responde a la convocatoria de ' + notifTextoJornada(jornada);
 
     pendientes.forEach(function (j) {
+      var enlaces = notifEnlacesRespuesta(j.id_jugador, jornada.id_jornada);
       var cuerpo = 'Hola ' + (j.apodo || j.nombre) + ',\n\n' +
         'Todavía no has respondido a esta convocatoria:\n' + notifTextoJornada(jornada) + '\n\n' +
-        'Entra en la app para decir si te apuntas o no:\n' + NOTIF_APP_URL + '\n\n' +
+        'Responde con un solo clic:\n' +
+        '✅ Sí, voy: ' + enlaces.si + '\n' +
+        '❌ No puedo: ' + enlaces.no + '\n\n' +
+        'O entra en la app:\n' + NOTIF_APP_URL + '\n\n' +
         '— El Moral - Hima';
       try {
         GmailApp.sendEmail(j.email, asunto, cuerpo, { from: NOTIF_EMAIL_REMITENTE, name: NOTIF_NOMBRE_REMITENTE });
