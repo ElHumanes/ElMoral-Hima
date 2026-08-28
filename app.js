@@ -2145,6 +2145,65 @@ function irAVistaEstadisticasJugador() {
  * y el resultado (victorias-derrotas) de cada jornada ya jugada.
  * ======================================================================= */
 
+function irAVistaCompaneros() {
+  mostrarVista('vista-companeros');
+  cargarCompaneros();
+}
+
+function cargarCompaneros() {
+  var guardada = obtenerSesionGuardada();
+  var contenedor = document.getElementById('lista-companeros');
+  contenedor.innerHTML = '<p class="texto-vacio">Cargando...</p>';
+
+  llamarApi('listarCompaneros', { token: guardada.token }).then(function (resultado) {
+    if (!resultado.ok) {
+      contenedor.innerHTML = '<p class="texto-vacio">' + (resultado.error || 'No se ha podido cargar.') + '</p>';
+      return;
+    }
+    pintarCompaneros(resultado.jugadores);
+  }).catch(function () {
+    contenedor.innerHTML = '<p class="texto-vacio">No se ha podido conectar con el servidor.</p>';
+  });
+}
+
+function pintarCompaneros(jugadores) {
+  var contenedor = document.getElementById('lista-companeros');
+  contenedor.innerHTML = '';
+
+  if (jugadores.length === 0) {
+    contenedor.innerHTML = '<p class="texto-vacio">Todavía no hay jugadores en el equipo.</p>';
+    return;
+  }
+
+  jugadores.forEach(function (jugador) {
+    var posicionSecundaria = jugador.posicion_secundaria
+      ? ' / ' + (POSICIONES_TEXTO[jugador.posicion_secundaria] || jugador.posicion_secundaria)
+      : '';
+
+    var tarjeta = document.createElement('div');
+    tarjeta.className = 'jugador-tarjeta';
+    tarjeta.innerHTML =
+      '<div class="jugador-info">' +
+        '<span class="jugador-nombre"></span>' +
+        (jugador.apodo ? '<span class="jugador-nombre-real"></span>' : '') +
+        '<div class="jugador-meta">' +
+          '<span class="insignia insignia-posicion"></span>' +
+          '<span>· Puntuación: ' + Number(jugador.puntuacion) + '</span>' +
+        '</div>' +
+      '</div>';
+
+    tarjeta.querySelector('.jugador-nombre').textContent = jugador.apodo || jugador.nombre_completo;
+    if (jugador.apodo) {
+      tarjeta.querySelector('.jugador-nombre-real').textContent = jugador.nombre_completo;
+    }
+    tarjeta.querySelector('.insignia-posicion').textContent =
+      (POSICIONES_TEXTO[jugador.posicion_principal] || jugador.posicion_principal) + posicionSecundaria;
+
+    tarjeta.insertBefore(crearAvatar(jugador, 'avatar-mediano'), tarjeta.firstChild);
+    contenedor.appendChild(tarjeta);
+  });
+}
+
 var clasificacionModoActual = 'EQUIPO';
 
 function irAVistaClasificacion() {
@@ -2425,6 +2484,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
   document.getElementById('boton-ir-estadisticas-jugador').addEventListener('click', irAVistaEstadisticasJugador);
   document.getElementById('boton-volver-estadisticas-jugador').addEventListener('click', function () {
+    mostrarVista('vista-inicio');
+  });
+
+  document.getElementById('boton-ir-companeros').addEventListener('click', irAVistaCompaneros);
+  document.getElementById('boton-volver-companeros').addEventListener('click', function () {
     mostrarVista('vista-inicio');
   });
 

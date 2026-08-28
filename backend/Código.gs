@@ -171,6 +171,10 @@ function manejarPeticion(e) {
       case 'confirmarAsistencia':
         return confirmarAsistenciaPorEnlace(params);
 
+      case 'listarCompaneros':
+        if (!validarSesion(params.token)) return respuestaError('Sesión no válida o caducada.');
+        return respuestaOk({ jugadores: listarCompanerosEquipo() });
+
       default:
         return respuestaError('Acción no reconocida: "' + action + '"');
     }

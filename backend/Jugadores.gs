@@ -67,6 +67,31 @@ function listarJugadores() {
   });
 }
 
+/**
+ * Vista básica del equipo para cualquier jugador (no solo el capitán): solo
+ * lo que hace falta para reconocerse entre compañeros — nombre, apodo,
+ * posición, puntuación y foto — sin datos privados como email, teléfono o
+ * usuario de acceso.
+ */
+function listarCompanerosEquipo() {
+  return leerFilas('JUGADORES')
+    .filter(function (j) { return j.estado === 'ACTIVO'; })
+    .map(function (j) {
+      return {
+        id_jugador: j.id_jugador,
+        nombre_completo: j.nombre_completo,
+        apodo: j.apodo || '',
+        posicion_principal: j.posicion_principal,
+        posicion_secundaria: j.posicion_secundaria || '',
+        puntuacion: j.puntuacion,
+        foto_url: j.foto_url || ''
+      };
+    })
+    .sort(function (a, b) {
+      return (a.apodo || a.nombre_completo).localeCompare(b.apodo || b.nombre_completo, 'es');
+    });
+}
+
 function crearJugador(sesion, datos) {
   requerirCapitan(sesion);
 
