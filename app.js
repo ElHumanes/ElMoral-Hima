@@ -154,6 +154,76 @@ function llamarApi(action, params) {
   });
 }
 
+/**
+ * Caché en memoria de la última respuesta buena de cada acción, para que al
+ * volver a una pantalla ya vista en esta misma sesión se vea al instante en
+ * vez de esperar otra vez el viaje de ida y vuelta al servidor. Siempre se
+ * pide igualmente la versión actualizada por detrás (así nunca se queda
+ * desactualizado más de lo que tarda esa petición) y se repinta si hay
+ * cambios; esto solo evita la ESPERA la segunda vez, no sustituye al dato real.
+ */
+var _cacheApi = {};
+
+function _claveCacheApi(action, params) {
+  var params2 = Object.assign({}, params);
+  delete params2.token;
+  return action + ':' + JSON.stringify(params2);
+}
+
+/**
+ * Igual que llamarApi, pero si ya hay una respuesta guardada de una llamada
+ * anterior con los mismos parámetros, la entrega al momento (vía
+ * alTenerCacheado) mientras de todas formas pide la actualizada por detrás.
+ * El resultado final (fresco) se sirve siempre a través de la promesa
+ * devuelta, igual que llamarApi normal.
+ */
+function llamarApiConCache(action, params, alTenerCacheado) {
+  var clave = _claveCacheApi(action, params);
+  var cacheado = _cacheApi[clave];
+  if (cacheado && alTenerCacheado) {
+    alTenerCacheado(cacheado);
+  }
+  return llamarApi(action, params).then(function (resultado) {
+    if (resultado.ok) _cacheApi[clave] = resultado;
+    return resultado;
+  });
+}
+
+/**
+ * Patrón común de las pantallas de "listar algo": si ya hay una respuesta en
+ * caché de esta misma sesión, la pinta al instante (sin pasar por
+ * "Cargando..."), y de todas formas pide la versión actualizada por detrás
+ * y vuelve a pintar cuando llega. Si esa actualización silenciosa falla pero
+ * ya había caché en pantalla, no se borra lo que ya se veía; solo se avisa
+ * del error si no había nada que mostrar todavía.
+ */
+/**
+ * Borra de la caché todo lo guardado para una acción (sin importar con qué
+ * parámetros se pidiera). Se llama justo después de guardar un cambio, para
+ * que la próxima vez que se pinte esa pantalla no se vea un instante el dato
+ * viejo antes de que llegue el refresco de fondo.
+ */
+function limpiarCacheApi(accion) {
+  Object.keys(_cacheApi).forEach(function (clave) {
+    if (clave === accion || clave.indexOf(accion + ':') === 0) delete _cacheApi[clave];
+  });
+}
+
+function cargarConCache(accion, params, contenedor, textoCargando, pintar, alError) {
+  var huboCache = !!_cacheApi[_claveCacheApi(accion, params)];
+  if (!huboCache && contenedor) {
+    contenedor.innerHTML = '<p class="texto-vacio">' + textoCargando + '</p>';
+  }
+  return llamarApiConCache(accion, params, function (cacheado) {
+    pintar(cacheado);
+  }).then(function (resultado) {
+    if (!resultado.ok) throw new Error(resultado.error || 'No se ha podido cargar.');
+    pintar(resultado);
+  }).catch(function (error) {
+    if (!huboCache && alError) alError(error);
+  });
+}
+
 function mostrarVista(idVista) {
   document.querySelectorAll('.vista').forEach(function (v) {
     v.classList.add('oculto');
@@ -294,6 +364,8 @@ function actualizarPuntuacionesSNP() {
           mensaje += '\n\nNo se han encontrado en el ranking de la SNP:\n' + resultado.sin_encontrar.join('\n');
         }
         alert(mensaje);
+        limpiarCacheApi('listarJugadores');
+        limpiarCacheApi('obtenerClasificacionCompleta');
         cargarJugadores();
       } else {
         alert(resultado.error || 'No se han podido actualizar las puntuaciones.');
@@ -310,21 +382,19 @@ function cargarJugadores() {
   var contenedor = document.getElementById('lista-jugadores');
   var mensaje = document.getElementById('mensaje-jugadores');
   mensaje.classList.add('oculto');
-  contenedor.innerHTML = '<p class="texto-vacio">Cargando jugadores...</p>';
 
-  llamarApi('listarJugadores', { token: guardada.token })
-    .then(function (resultado) {
-      if (!resultado.ok) {
-        throw new Error(resultado.error || 'No se han podido cargar los jugadores.');
-      }
+  cargarConCache(
+    'listarJugadores', { token: guardada.token }, contenedor, 'Cargando jugadores...',
+    function (resultado) {
       jugadoresCache = resultado.jugadores;
       pintarJugadores(jugadoresCache);
-    })
-    .catch(function (error) {
+    },
+    function (error) {
       contenedor.innerHTML = '';
       mensaje.textContent = error.message || 'No se ha podido conectar con el servidor.';
       mensaje.classList.remove('oculto');
-    });
+    }
+  );
 }
 
 function pintarJugadores(jugadores) {
@@ -436,6 +506,7 @@ function cambiarEstadoJugador(jugador, nuevoEstado) {
     nuevo_estado: nuevoEstado
   }).then(function (resultado) {
     if (resultado.ok) {
+      limpiarCacheApi('listarJugadores');
       cargarJugadores();
     } else {
       alert(resultado.error || 'No se ha podido cambiar el estado del jugador.');
@@ -520,6 +591,7 @@ function manejarEnvioJugador(evento) {
   llamarApi(accion, datos)
     .then(function (resultado) {
       if (resultado.ok) {
+        limpiarCacheApi('listarJugadores');
         cerrarModalJugador();
         cargarJugadores();
         if (accion === 'crearJugador' && resultado.nombre_usuario) {
@@ -557,21 +629,19 @@ function cargarJornadas() {
   var contenedor = document.getElementById('lista-jornadas');
   var mensaje = document.getElementById('mensaje-jornadas');
   mensaje.classList.add('oculto');
-  contenedor.innerHTML = '<p class="texto-vacio">Cargando jornadas...</p>';
 
-  llamarApi('listarJornadas', { token: guardada.token })
-    .then(function (resultado) {
-      if (!resultado.ok) {
-        throw new Error(resultado.error || 'No se han podido cargar las jornadas.');
-      }
+  cargarConCache(
+    'listarJornadas', { token: guardada.token }, contenedor, 'Cargando jornadas...',
+    function (resultado) {
       jornadasCache = resultado.jornadas;
       pintarJornadasFiltradas();
-    })
-    .catch(function (error) {
+    },
+    function (error) {
       contenedor.innerHTML = '';
       mensaje.textContent = error.message || 'No se ha podido conectar con el servidor.';
       mensaje.classList.remove('oculto');
-    });
+    }
+  );
 }
 
 function pintarJornadasFiltradas() {
@@ -775,6 +845,8 @@ function manejarEnvioResultado(evento) {
   llamarApi('registrarResultado', datos)
     .then(function (resultado) {
       if (resultado.ok) {
+        ['listarResultados', 'obtenerClasificacionCompleta', 'obtenerDashboard', 'obtenerEstadisticasCompletasJugador']
+          .forEach(limpiarCacheApi);
         cerrarModalResultado();
         cargarPartidos(jornadaActual.id_jornada);
         // El estado de la jornada puede haber cambiado (JUGADA / FINALIZADA);
@@ -903,6 +975,7 @@ function cambiarEstadoJornadaYRecargar(idJornada, nuevoEstado) {
         alert(resultado.error || 'No se ha podido cambiar el estado de la jornada.');
         return;
       }
+      limpiarCacheApi('listarJornadas');
       jornadaActual.estado = nuevoEstado;
       abrirDetalleJornada(jornadaActual);
     });
@@ -941,6 +1014,7 @@ function manejarEnvioJornada(evento) {
   llamarApi('crearJornada', datos)
     .then(function (resultado) {
       if (resultado.ok) {
+        limpiarCacheApi('listarJornadas');
         cerrarModalJornada();
         cargarJornadas();
       } else {
@@ -1590,14 +1664,10 @@ function irAVistaPerfil() {
 function cargarPerfil() {
   var guardada = obtenerSesionGuardada();
   var contenedor = document.getElementById('tarjeta-perfil');
-  contenedor.innerHTML = '<p class="texto-vacio">Cargando...</p>';
 
-  llamarApi('listarJugadores', { token: guardada.token }).then(function (resultado) {
-    if (!resultado.ok) {
-      contenedor.innerHTML = '<p class="texto-vacio">No se ha podido cargar tu perfil.</p>';
-      return;
-    }
-
+  cargarConCache(
+    'listarJugadores', { token: guardada.token }, contenedor, 'Cargando...',
+    function (resultado) {
     var yo = resultado.jugadores.filter(function (j) { return j.id_jugador === guardada.id_jugador; })[0];
     if (!yo) {
       contenedor.innerHTML = '<p class="texto-vacio">Tu usuario no tiene una ficha de jugador asociada. Habla con el capitán.</p>';
@@ -1637,7 +1707,11 @@ function cargarPerfil() {
       'Usuario para entrar: ' + (yo.nombre_usuario || '(pregunta al capitán)');
 
     cargarEstadisticasPerfil(guardada.id_jugador);
-  });
+    },
+    function () {
+      contenedor.innerHTML = '<p class="texto-vacio">No se ha podido cargar tu perfil.</p>';
+    }
+  );
 }
 
 /* ---- Editar mis datos ---- */
@@ -1709,6 +1783,7 @@ function manejarGuardarPerfilPropio(evento) {
       if (resultadoCodigo && !resultadoCodigo.ok) {
         throw new Error(resultadoCodigo.error || 'Los datos se han guardado, pero no se ha podido cambiar la contraseña.');
       }
+      limpiarCacheApi('listarJugadores');
       cerrarEdicionPerfil();
       cargarPerfil();
     })
@@ -1794,8 +1869,7 @@ function cargarEstadisticasPerfil(idJugador, idContenedor) {
   var guardada = obtenerSesionGuardada();
   var contenedor = document.getElementById(idContenedor || 'tarjeta-perfil-estadisticas');
 
-  llamarApi('obtenerEstadisticasCompletasJugador', { token: guardada.token, id_jugador: idJugador }).then(function (resultado) {
-    if (!resultado.ok) return;
+  function pintar(resultado) {
     var e = resultado.estadisticas;
     var posicion = resultado.posicion;
 
@@ -1838,7 +1912,12 @@ function cargarEstadisticasPerfil(idJugador, idContenedor) {
       insignia.textContent = 'P' + n + ': ' + (r && r.jugados > 0 ? r.victorias + '/' + r.jugados : 'sin datos');
       filaRendimiento.appendChild(insignia);
     }
-  });
+  }
+
+  llamarApiConCache('obtenerEstadisticasCompletasJugador', { token: guardada.token, id_jugador: idJugador }, pintar)
+    .then(function (resultado) {
+      if (resultado.ok) pintar(resultado);
+    });
 }
 
 /* ==========================================================================
@@ -1853,46 +1932,46 @@ function irAVistaCalendario() {
 function cargarCalendario() {
   var guardada = obtenerSesionGuardada();
   var contenedor = document.getElementById('lista-calendario');
-  contenedor.innerHTML = '<p class="texto-vacio">Cargando...</p>';
 
-  llamarApi('listarJornadas', { token: guardada.token }).then(function (resultado) {
-    if (!resultado.ok) {
-      contenedor.innerHTML = '<p class="texto-vacio">' + (resultado.error || 'No se han podido cargar las jornadas.') + '</p>';
-      return;
-    }
+  cargarConCache(
+    'listarJornadas', { token: guardada.token }, contenedor, 'Cargando...',
+    function (resultado) {
+      // El calendario es solo para ver lo que queda por jugar: las jornadas ya
+      // finalizadas se consultan desde Resultados o el Historial de convocatorias.
+      var proximas = resultado.jornadas
+        .filter(function (j) { return j.estado !== 'FINALIZADA'; })
+        .sort(function (a, b) { return String(a.fecha).localeCompare(String(b.fecha)); });
 
-    // El calendario es solo para ver lo que queda por jugar: las jornadas ya
-    // finalizadas se consultan desde Resultados o el Historial de convocatorias.
-    var proximas = resultado.jornadas
-      .filter(function (j) { return j.estado !== 'FINALIZADA'; })
-      .sort(function (a, b) { return String(a.fecha).localeCompare(String(b.fecha)); });
+      if (proximas.length === 0) {
+        contenedor.innerHTML = '<p class="texto-vacio">No hay próximos partidos programados.</p>';
+        return;
+      }
 
-    if (proximas.length === 0) {
-      contenedor.innerHTML = '<p class="texto-vacio">No hay próximos partidos programados.</p>';
-      return;
-    }
-
-    contenedor.innerHTML = '';
-    proximas.forEach(function (jornada) {
-      var fila = document.createElement('div');
-      fila.className = 'jornada-tarjeta';
-      fila.innerHTML =
-        '<div class="jornada-info">' +
-          '<span class="jornada-rival"></span>' +
-          '<span class="jornada-meta"></span>' +
-          '<span class="insignia ' + claseInsigniaEstado(jornada.estado) + '"></span>' +
-        '</div>';
-      fila.querySelector('.jornada-rival').textContent =
-        (jornada.local_visitante === 'LOCAL' ? 'vs ' : '@ ') + jornada.rival;
-      fila.querySelector('.jornada-meta').textContent =
-        formatearFecha(jornada.fecha) + (jornada.lugar ? ' · ' + jornada.lugar : '');
-      fila.querySelector('.insignia').textContent = ESTADOS_JORNADA_TEXTO[jornada.estado] || jornada.estado;
-      fila.addEventListener('click', function () {
-        irAVistaJornadaLectura(jornada);
+      contenedor.innerHTML = '';
+      proximas.forEach(function (jornada) {
+        var fila = document.createElement('div');
+        fila.className = 'jornada-tarjeta';
+        fila.innerHTML =
+          '<div class="jornada-info">' +
+            '<span class="jornada-rival"></span>' +
+            '<span class="jornada-meta"></span>' +
+            '<span class="insignia ' + claseInsigniaEstado(jornada.estado) + '"></span>' +
+          '</div>';
+        fila.querySelector('.jornada-rival').textContent =
+          (jornada.local_visitante === 'LOCAL' ? 'vs ' : '@ ') + jornada.rival;
+        fila.querySelector('.jornada-meta').textContent =
+          formatearFecha(jornada.fecha) + (jornada.lugar ? ' · ' + jornada.lugar : '');
+        fila.querySelector('.insignia').textContent = ESTADOS_JORNADA_TEXTO[jornada.estado] || jornada.estado;
+        fila.addEventListener('click', function () {
+          irAVistaJornadaLectura(jornada);
+        });
+        contenedor.appendChild(fila);
       });
-      contenedor.appendChild(fila);
-    });
-  });
+    },
+    function (error) {
+      contenedor.innerHTML = '<p class="texto-vacio">' + (error.message || 'No se han podido cargar las jornadas.') + '</p>';
+    }
+  );
 }
 
 /* ==========================================================================
@@ -1920,38 +1999,39 @@ function irAVistaHistorialConvocatorias() {
 function cargarHistorialConvocatorias() {
   var guardada = obtenerSesionGuardada();
   var contenedor = document.getElementById('lista-historial-convocatorias');
-  contenedor.innerHTML = '<p class="texto-vacio">Cargando...</p>';
 
-  llamarApi('listarHistorialConvocatorias', { token: guardada.token }).then(function (resultado) {
-    if (!resultado.ok) {
-      contenedor.innerHTML = '<p class="texto-vacio">' + (resultado.error || 'No se ha podido cargar el historial.') + '</p>';
-      return;
-    }
-    if (resultado.historial.length === 0) {
-      contenedor.innerHTML = '<p class="texto-vacio">Todavía no hay convocatorias cerradas.</p>';
-      return;
-    }
+  cargarConCache(
+    'listarHistorialConvocatorias', { token: guardada.token }, contenedor, 'Cargando...',
+    function (resultado) {
+      if (resultado.historial.length === 0) {
+        contenedor.innerHTML = '<p class="texto-vacio">Todavía no hay convocatorias cerradas.</p>';
+        return;
+      }
 
-    contenedor.innerHTML = '';
-    resultado.historial.forEach(function (h) {
-      var fila = document.createElement('div');
-      fila.className = 'jornada-tarjeta';
-      fila.innerHTML =
-        '<div class="jornada-info">' +
-          '<span class="jornada-rival"></span>' +
-          '<span class="jornada-meta"></span>' +
-          '<span class="insignia"></span>' +
-        '</div>';
-      fila.querySelector('.jornada-rival').textContent =
-        (h.local_visitante === 'LOCAL' ? 'vs ' : '@ ') + h.rival;
-      fila.querySelector('.jornada-meta').textContent =
-        formatearFecha(h.fecha) + (h.lugar ? ' · ' + h.lugar : '');
-      var insignia = fila.querySelector('.insignia');
-      insignia.classList.add(DISPONIBILIDAD_HISTORIAL_CLASE[h.disponibilidad] || 'insignia-posicion');
-      insignia.textContent = DISPONIBILIDAD_HISTORIAL_TEXTO[h.disponibilidad] || h.disponibilidad;
-      contenedor.appendChild(fila);
-    });
-  });
+      contenedor.innerHTML = '';
+      resultado.historial.forEach(function (h) {
+        var fila = document.createElement('div');
+        fila.className = 'jornada-tarjeta';
+        fila.innerHTML =
+          '<div class="jornada-info">' +
+            '<span class="jornada-rival"></span>' +
+            '<span class="jornada-meta"></span>' +
+            '<span class="insignia"></span>' +
+          '</div>';
+        fila.querySelector('.jornada-rival').textContent =
+          (h.local_visitante === 'LOCAL' ? 'vs ' : '@ ') + h.rival;
+        fila.querySelector('.jornada-meta').textContent =
+          formatearFecha(h.fecha) + (h.lugar ? ' · ' + h.lugar : '');
+        var insignia = fila.querySelector('.insignia');
+        insignia.classList.add(DISPONIBILIDAD_HISTORIAL_CLASE[h.disponibilidad] || 'insignia-posicion');
+        insignia.textContent = DISPONIBILIDAD_HISTORIAL_TEXTO[h.disponibilidad] || h.disponibilidad;
+        contenedor.appendChild(fila);
+      });
+    },
+    function (error) {
+      contenedor.innerHTML = '<p class="texto-vacio">' + (error.message || 'No se ha podido cargar el historial.') + '</p>';
+    }
+  );
 }
 
 /* ==========================================================================
@@ -2034,17 +2114,18 @@ function cargarResultados(modo) {
   document.getElementById('boton-resultados-mios').className = 'boton ' + (modo === 'MIOS' ? 'boton-primario' : 'boton-secundario');
 
   var contenedor = document.getElementById('lista-resultados');
-  contenedor.innerHTML = '<p class="texto-vacio">Cargando...</p>';
-
   var guardada = obtenerSesionGuardada();
-  llamarApi('listarResultados', { token: guardada.token }).then(function (resultado) {
-    if (!resultado.ok) {
-      contenedor.innerHTML = '<p class="texto-vacio">' + (resultado.error || 'No se han podido cargar los resultados.') + '</p>';
-      return;
+
+  cargarConCache(
+    'listarResultados', { token: guardada.token }, contenedor, 'Cargando...',
+    function (resultado) {
+      resultadosCache = resultado.resultados;
+      pintarResultados();
+    },
+    function (error) {
+      contenedor.innerHTML = '<p class="texto-vacio">' + (error.message || 'No se han podido cargar los resultados.') + '</p>';
     }
-    resultadosCache = resultado.resultados;
-    pintarResultados();
-  });
+  );
 }
 
 function cambiarModoResultados(modo) {
@@ -2153,17 +2234,16 @@ function irAVistaCompaneros() {
 function cargarCompaneros() {
   var guardada = obtenerSesionGuardada();
   var contenedor = document.getElementById('lista-companeros');
-  contenedor.innerHTML = '<p class="texto-vacio">Cargando...</p>';
 
-  llamarApi('listarCompaneros', { token: guardada.token }).then(function (resultado) {
-    if (!resultado.ok) {
-      contenedor.innerHTML = '<p class="texto-vacio">' + (resultado.error || 'No se ha podido cargar.') + '</p>';
-      return;
+  cargarConCache(
+    'listarCompaneros', { token: guardada.token }, contenedor, 'Cargando...',
+    function (resultado) {
+      pintarCompaneros(resultado.jugadores);
+    },
+    function () {
+      contenedor.innerHTML = '<p class="texto-vacio">No se ha podido conectar con el servidor.</p>';
     }
-    pintarCompaneros(resultado.jugadores);
-  }).catch(function () {
-    contenedor.innerHTML = '<p class="texto-vacio">No se ha podido conectar con el servidor.</p>';
-  });
+  );
 }
 
 function pintarCompaneros(jugadores) {
@@ -2223,31 +2303,35 @@ function cambiarModoClasificacion(modo) {
 function cargarClasificacion() {
   var guardada = obtenerSesionGuardada();
   var resumenEquipo = document.getElementById('resumen-clasificacion-equipo');
-  var listaJornadas = document.getElementById('clasificacion-equipo-jornadas');
   var listaRanking = document.getElementById('clasificacion-ranking-jugadores');
   var listaParejas = document.getElementById('clasificacion-ranking-parejas');
-  resumenEquipo.innerHTML = '<p class="texto-vacio">Cargando...</p>';
-  listaJornadas.innerHTML = '';
-  listaRanking.innerHTML = '<p class="texto-vacio">Cargando...</p>';
-  listaParejas.innerHTML = '<p class="texto-vacio">Cargando...</p>';
 
-  llamarApi('obtenerClasificacionCompleta', { token: guardada.token }).then(function (resultado) {
-    if (!resultado.ok) {
-      var mensajeError = '<p class="texto-vacio">' + (resultado.error || 'No se ha podido cargar.') + '</p>';
-      resumenEquipo.innerHTML = mensajeError;
-      listaRanking.innerHTML = mensajeError;
-      listaParejas.innerHTML = mensajeError;
-      return;
-    }
+  var huboCache = !!_cacheApi[_claveCacheApi('obtenerClasificacionCompleta', { token: guardada.token })];
+  if (!huboCache) {
+    resumenEquipo.innerHTML = '<p class="texto-vacio">Cargando...</p>';
+    document.getElementById('clasificacion-equipo-jornadas').innerHTML = '';
+    listaRanking.innerHTML = '<p class="texto-vacio">Cargando...</p>';
+    listaParejas.innerHTML = '<p class="texto-vacio">Cargando...</p>';
+  }
+
+  function pintar(resultado) {
     pintarClasificacionEquipo(resultado.clasificacion.equipo);
     pintarRankingJugadores(resultado.clasificacion.ranking_jugadores, 'clasificacion-ranking-jugadores');
     pintarRankingParejas(resultado.clasificacion.ranking_parejas, 'clasificacion-ranking-parejas');
-  }).catch(function () {
-    var mensaje = '<p class="texto-vacio">No se ha podido conectar con el servidor.</p>';
-    resumenEquipo.innerHTML = mensaje;
-    listaRanking.innerHTML = mensaje;
-    listaParejas.innerHTML = mensaje;
-  });
+  }
+
+  llamarApiConCache('obtenerClasificacionCompleta', { token: guardada.token }, pintar)
+    .then(function (resultado) {
+      if (!resultado.ok) throw new Error(resultado.error || 'No se ha podido cargar.');
+      pintar(resultado);
+    })
+    .catch(function (error) {
+      if (huboCache) return;
+      var mensaje = '<p class="texto-vacio">' + (error.message || 'No se ha podido conectar con el servidor.') + '</p>';
+      resumenEquipo.innerHTML = mensaje;
+      listaRanking.innerHTML = mensaje;
+      listaParejas.innerHTML = mensaje;
+    });
 }
 
 /**
@@ -2302,13 +2386,19 @@ function irAVistaDashboard() {
 function cargarDashboard() {
   var guardada = obtenerSesionGuardada();
   var resumen = document.getElementById('resumen-dashboard');
-  var listaRanking = document.getElementById('lista-ranking-jugadores');
-  var listaParejas = document.getElementById('lista-ranking-parejas');
-  resumen.innerHTML = '<p class="texto-vacio">Cargando...</p>';
-  listaRanking.innerHTML = '';
-  listaParejas.innerHTML = '';
 
-  llamarApi('obtenerDashboard', { token: guardada.token }).then(function (dash) {
+  var huboCache = !!_cacheApi[_claveCacheApi('obtenerDashboard', { token: guardada.token })];
+  if (!huboCache) {
+    resumen.innerHTML = '<p class="texto-vacio">Cargando...</p>';
+    document.getElementById('lista-ranking-jugadores').innerHTML = '';
+    document.getElementById('lista-ranking-parejas').innerHTML = '';
+  }
+
+  llamarApiConCache('obtenerDashboard', { token: guardada.token }, function (dash) {
+    pintarResumenDashboard(dash.dashboard);
+    pintarRankingJugadores(dash.dashboard.ranking_jugadores);
+    pintarRankingParejas(dash.dashboard.ranking_parejas);
+  }).then(function (dash) {
     if (!dash.ok) return;
     pintarResumenDashboard(dash.dashboard);
     pintarRankingJugadores(dash.dashboard.ranking_jugadores);
