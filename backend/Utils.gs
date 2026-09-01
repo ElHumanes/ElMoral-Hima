@@ -15,6 +15,20 @@ var PROP_SPREADSHEET_ID = 'SPREADSHEET_ID';
 var _spreadsheetCache = null;
 var _sheetCache = {};
 
+// Caché de las FILAS ya leídas de cada pestaña, también solo para esta misma
+// ejecución. Sin esto, aunque el Sheet ya estuviera en caché, cada llamada a
+// leerFilas('JUGADORES') volvía a pedir todos los datos a Google Sheets — y
+// dentro de una sola petición es normal leer la misma pestaña varias veces
+// (por ejemplo, validarSesion lee USUARIOS, y la propia acción que se está
+// atendiendo puede volver a leer USUARIOS para otra cosa). Se invalida
+// automáticamente en cuanto se escribe algo en esa pestaña, para no servir
+// datos ya desactualizados dentro de la misma ejecución.
+var _filasCache = {};
+
+function invalidarCacheFilas(nombreHoja) {
+  delete _filasCache[nombreHoja];
+}
+
 /**
  * Devuelve el Spreadsheet configurado en las Propiedades del proyecto.
  * El ID nunca se escribe en el código fuente (que se sube a GitHub más adelante
@@ -48,9 +62,14 @@ function getSheet(nombreHoja) {
  * usando la fila 1 (cabeceras) como claves. Ignora filas completamente vacías.
  */
 function leerFilas(nombreHoja) {
+  if (_filasCache[nombreHoja]) return _filasCache[nombreHoja].slice();
+
   var hoja = getSheet(nombreHoja);
   var datos = hoja.getDataRange().getValues();
-  if (datos.length < 2) return [];
+  if (datos.length < 2) {
+    _filasCache[nombreHoja] = [];
+    return [];
+  }
 
   var cabeceras = datos[0];
   var filas = [];
@@ -66,7 +85,8 @@ function leerFilas(nombreHoja) {
     obj._fila = i + 1; // número de fila real en la hoja (1-indexado), útil para actualizar
     filas.push(obj);
   }
-  return filas;
+  _filasCache[nombreHoja] = filas;
+  return filas.slice();
 }
 
 /**
@@ -96,6 +116,7 @@ function agregarFila(nombreHoja, objeto) {
     return objeto.hasOwnProperty(clave) ? objeto[clave] : '';
   });
   hoja.appendRow(fila);
+  invalidarCacheFilas(nombreHoja);
 }
 
 /**
@@ -119,6 +140,7 @@ function actualizarFila(nombreHoja, columnaId, valorId, cambios) {
           hoja.getRange(i + 1, colCambio + 1).setValue(cambios[clave]);
         }
       }
+      invalidarCacheFilas(nombreHoja);
       return true;
     }
   }
@@ -139,11 +161,14 @@ function eliminarFilas(nombreHoja, columnaId, valorId) {
     throw new Error('La pestaña "' + nombreHoja + '" no tiene columna "' + columnaId + '".');
   }
 
+  var borrada = false;
   for (var i = datos.length - 1; i >= 1; i--) {
     if (datos[i][colIndice] === valorId) {
       hoja.deleteRow(i + 1);
+      borrada = true;
     }
   }
+  if (borrada) invalidarCacheFilas(nombreHoja);
 }
 
 /**
@@ -157,6 +182,7 @@ function vaciarHoja(nombreHoja) {
   if (ultimaFila > 1) {
     hoja.deleteRows(2, ultimaFila - 1);
   }
+  invalidarCacheFilas(nombreHoja);
 }
 
 /**
@@ -169,6 +195,7 @@ function agregarColumnaSiFalta(nombreHoja, nombreColumna) {
   var cabeceras = ultimaColumna > 0 ? hoja.getRange(1, 1, 1, ultimaColumna).getValues()[0] : [];
   if (cabeceras.indexOf(nombreColumna) !== -1) return;
   hoja.getRange(1, ultimaColumna + 1).setValue(nombreColumna);
+  invalidarCacheFilas(nombreHoja);
 }
 
 /** Genera un identificador único (UUID). Gratuito, nativo de Apps Script. */
