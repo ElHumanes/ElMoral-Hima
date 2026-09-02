@@ -2563,6 +2563,8 @@ document.addEventListener('DOMContentLoaded', function () {
   document.getElementById('boton-volver-jornada-lectura').addEventListener('click', irAVistaCalendario);
 
   document.getElementById('boton-ir-resultados').addEventListener('click', irAVistaResultados);
+  document.getElementById('boton-ir-resultados-capitan').addEventListener('click', irAVistaResultados);
+  document.getElementById('boton-ir-calendario-capitan').addEventListener('click', irAVistaCalendario);
   document.getElementById('boton-volver-resultados').addEventListener('click', function () {
     mostrarVista('vista-inicio');
   });
@@ -2596,6 +2598,7 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
   document.getElementById('boton-ir-historial-convocatorias').addEventListener('click', irAVistaHistorialConvocatorias);
+  document.getElementById('boton-ir-historial-convocatorias-capitan').addEventListener('click', irAVistaHistorialConvocatorias);
   document.getElementById('boton-volver-historial-convocatorias').addEventListener('click', function () {
     mostrarVista('vista-inicio');
   });
