@@ -239,6 +239,10 @@
         <p id="jornada-detalle-observaciones" class="texto-secundario"></p>
 
         <div id="jornada-detalle-acciones" class="modal-botones"></div>
+        <div class="modal-botones">
+          <button type="button" class="boton boton-secundario" id="boton-editar-jornada">✏️ Editar</button>
+          <button type="button" class="boton boton-secundario boton-mini-peligro" id="boton-borrar-jornada">🗑️ Borrar jornada</button>
+        </div>
       </div>
 
       <div id="bloque-convocatoria" class="oculto">
@@ -531,9 +535,10 @@
   <!-- MODAL: nueva jornada -->
   <div id="modal-jornada" class="modal-fondo oculto">
     <div class="modal-caja">
-      <h2 class="modal-titulo">Nueva jornada</h2>
+      <h2 class="modal-titulo" id="modal-jornada-titulo">Nueva jornada</h2>
 
       <form id="formulario-jornada">
+        <input type="hidden" id="jornada-id">
         <label class="etiqueta" for="jornada-fecha">Fecha</label>
         <input class="entrada" type="date" id="jornada-fecha" required>
 

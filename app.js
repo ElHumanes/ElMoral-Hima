@@ -254,13 +254,13 @@ function mostrarInicio(datosUsuario) {
   mostrarVista('vista-inicio');
 
   document.getElementById('tarjeta-convocatoria-jugador').classList.add('oculto');
-  if (datosUsuario.rol === 'JUGADOR') {
-    comprobarConvocatoriaAbiertaParaJugador();
-  }
-
   document.getElementById('tarjeta-convocatoria-capitan').classList.add('oculto');
   if (datosUsuario.rol === 'CAPITAN') {
+    // Una sola llamada resuelve tanto el panel de gestión como (si el
+    // capitán también es jugador) su propia tarjeta de "Voy / No puedo".
     comprobarConvocatoriaAbiertaParaCapitan();
+  } else if (datosUsuario.rol === 'JUGADOR') {
+    comprobarConvocatoriaAbiertaParaJugador();
   }
 }
 
@@ -967,6 +967,27 @@ function pintarAccionesJornada(jornada) {
   contenedor.appendChild(boton);
 }
 
+function borrarJornadaConConfirmacion(jornada) {
+  var texto = (jornada.local_visitante === 'LOCAL' ? 'vs ' : '@ ') + jornada.rival + ' (' + formatearFecha(jornada.fecha) + ')';
+  var confirmado = window.confirm(
+    '¿Seguro que quieres borrar la jornada ' + texto + '?\n\n' +
+    'Se borrará también toda la convocatoria, la selección, las parejas y los resultados que tuviera. ' +
+    'Esta acción no se puede deshacer.'
+  );
+  if (!confirmado) return;
+
+  var guardada = obtenerSesionGuardada();
+  llamarApi('eliminarJornada', { token: guardada.token, id_jornada: jornada.id_jornada })
+    .then(function (resultado) {
+      if (!resultado.ok) {
+        alert(resultado.error || 'No se ha podido borrar la jornada.');
+        return;
+      }
+      limpiarCacheApi('listarJornadas');
+      irAVistaJornadas();
+    });
+}
+
 function cambiarEstadoJornadaYRecargar(idJornada, nuevoEstado) {
   var guardada = obtenerSesionGuardada();
   llamarApi('cambiarEstadoJornada', { token: guardada.token, id_jornada: idJornada, nuevo_estado: nuevoEstado })
@@ -981,9 +1002,24 @@ function cambiarEstadoJornadaYRecargar(idJornada, nuevoEstado) {
     });
 }
 
-function abrirModalJornada() {
+/** Sin argumento: modal para crear. Con una jornada: modal para editarla. */
+function abrirModalJornada(jornada) {
   document.getElementById('formulario-jornada').reset();
   document.getElementById('mensaje-error-jornada').classList.add('oculto');
+
+  if (jornada) {
+    document.getElementById('modal-jornada-titulo').textContent = 'Editar jornada';
+    document.getElementById('jornada-id').value = jornada.id_jornada;
+    document.getElementById('jornada-fecha').value = String(jornada.fecha).split('T')[0];
+    document.getElementById('jornada-rival').value = jornada.rival;
+    document.getElementById('jornada-local-visitante').value = jornada.local_visitante;
+    document.getElementById('jornada-lugar').value = jornada.lugar || '';
+    document.getElementById('jornada-observaciones').value = jornada.observaciones || '';
+  } else {
+    document.getElementById('modal-jornada-titulo').textContent = 'Nueva jornada';
+    document.getElementById('jornada-id').value = '';
+  }
+
   document.getElementById('modal-jornada').classList.remove('oculto');
 }
 
@@ -995,6 +1031,7 @@ function manejarEnvioJornada(evento) {
   evento.preventDefault();
 
   var guardada = obtenerSesionGuardada();
+  var idJornada = document.getElementById('jornada-id').value;
   var botonGuardar = document.getElementById('boton-guardar-jornada');
   var mensajeError = document.getElementById('mensaje-error-jornada');
 
@@ -1006,17 +1043,26 @@ function manejarEnvioJornada(evento) {
     lugar: document.getElementById('jornada-lugar').value.trim(),
     observaciones: document.getElementById('jornada-observaciones').value.trim()
   };
+  if (idJornada) datos.id_jornada = idJornada;
 
   mensajeError.classList.add('oculto');
   botonGuardar.disabled = true;
   botonGuardar.textContent = 'Guardando...';
 
-  llamarApi('crearJornada', datos)
+  llamarApi(idJornada ? 'editarJornada' : 'crearJornada', datos)
     .then(function (resultado) {
       if (resultado.ok) {
         limpiarCacheApi('listarJornadas');
         cerrarModalJornada();
-        cargarJornadas();
+        if (idJornada && jornadaActual && jornadaActual.id_jornada === idJornada) {
+          jornadaActual = Object.assign({}, jornadaActual, {
+            fecha: datos.fecha, rival: datos.rival, local_visitante: datos.local_visitante,
+            lugar: datos.lugar, observaciones: datos.observaciones
+          });
+          abrirDetalleJornada(jornadaActual);
+        } else {
+          cargarJornadas();
+        }
       } else {
         mensajeError.textContent = resultado.error || 'No se ha podido guardar la jornada.';
         mensajeError.classList.remove('oculto');
@@ -1558,40 +1604,44 @@ function usarRecomendacion(alineacion, boton) {
  * CONVOCATORIA — respuesta del jugador (pantalla de inicio)
  * ======================================================================= */
 
+/** Pinta la tarjeta de "responder a esta convocatoria" (mismo bloque para jugador y capitán). */
+function pintarTarjetaConvocatoriaPersonal(abierta) {
+  var tarjeta = document.getElementById('tarjeta-convocatoria-jugador');
+
+  if (!abierta) {
+    tarjeta.classList.add('oculto');
+    return;
+  }
+
+  document.getElementById('convocatoria-jugador-titulo').textContent =
+    (abierta.local_visitante === 'LOCAL' ? 'vs ' : '@ ') + abierta.rival;
+  document.getElementById('convocatoria-jugador-info').textContent =
+    formatearFecha(abierta.fecha) + (abierta.lugar ? ' · ' + abierta.lugar : '');
+  tarjeta.classList.remove('oculto');
+
+  var textoRespuesta = document.getElementById('convocatoria-jugador-respuesta-actual');
+  if (abierta.mi_respuesta && abierta.mi_respuesta !== 'PENDIENTE') {
+    textoRespuesta.textContent = 'Tu respuesta actual: ' +
+      (abierta.mi_respuesta === 'ME_APUNTO' ? 'Me apunto ✅' : 'No puedo ❌');
+    textoRespuesta.classList.remove('oculto');
+  } else {
+    textoRespuesta.classList.add('oculto');
+  }
+
+  document.getElementById('boton-me-apunto').onclick = function () {
+    responderConvocatoria(abierta.id_jornada, 'ME_APUNTO');
+  };
+  document.getElementById('boton-no-puedo').onclick = function () {
+    responderConvocatoria(abierta.id_jornada, 'NO_PUEDO');
+  };
+}
+
 function comprobarConvocatoriaAbiertaParaJugador() {
   var guardada = obtenerSesionGuardada();
-  var tarjeta = document.getElementById('tarjeta-convocatoria-jugador');
 
   llamarApi('obtenerResumenInicio', { token: guardada.token }).then(function (resultado) {
     if (!resultado.ok) return;
-
-    var abierta = resultado.resumen.convocatoria;
-    if (!abierta) {
-      tarjeta.classList.add('oculto');
-      return;
-    }
-
-    document.getElementById('convocatoria-jugador-titulo').textContent =
-      (abierta.local_visitante === 'LOCAL' ? 'vs ' : '@ ') + abierta.rival;
-    document.getElementById('convocatoria-jugador-info').textContent =
-      formatearFecha(abierta.fecha) + (abierta.lugar ? ' · ' + abierta.lugar : '');
-    tarjeta.classList.remove('oculto');
-
-    var textoRespuesta = document.getElementById('convocatoria-jugador-respuesta-actual');
-    if (abierta.mi_respuesta && abierta.mi_respuesta !== 'PENDIENTE') {
-      textoRespuesta.textContent = 'Tu respuesta actual: ' +
-        (abierta.mi_respuesta === 'ME_APUNTO' ? 'Me apunto ✅' : 'No puedo ❌');
-      textoRespuesta.classList.remove('oculto');
-    } else {
-      textoRespuesta.classList.add('oculto');
-    }
-
-    document.getElementById('boton-me-apunto').onclick = function () {
-      responderConvocatoria(abierta.id_jornada, 'ME_APUNTO');
-    };
-    document.getElementById('boton-no-puedo').onclick = function () {
-      responderConvocatoria(abierta.id_jornada, 'NO_PUEDO');
-    };
+    pintarTarjetaConvocatoriaPersonal(resultado.resumen.convocatoria);
   });
 }
 
@@ -1599,10 +1649,14 @@ function responderConvocatoria(idJornada, disponibilidad) {
   var guardada = obtenerSesionGuardada();
   llamarApi('responderConvocatoria', { token: guardada.token, id_jornada: idJornada, disponibilidad: disponibilidad })
     .then(function (resultado) {
-      if (resultado.ok) {
-        comprobarConvocatoriaAbiertaParaJugador();
-      } else {
+      if (!resultado.ok) {
         alert(resultado.error || 'No se ha podido registrar tu respuesta.');
+        return;
+      }
+      if (sesionActual && sesionActual.rol === 'CAPITAN') {
+        comprobarConvocatoriaAbiertaParaCapitan();
+      } else {
+        comprobarConvocatoriaAbiertaParaJugador();
       }
     });
 }
@@ -1618,6 +1672,8 @@ function comprobarConvocatoriaAbiertaParaCapitan() {
 
   llamarApi('obtenerResumenInicio', { token: guardada.token }).then(function (resultado) {
     if (!resultado.ok) return;
+
+    pintarTarjetaConvocatoriaPersonal(resultado.resumen.mi_convocatoria);
 
     var convocatorias = resultado.resumen.convocatorias || [];
     if (convocatorias.length === 0) {
@@ -2542,7 +2598,15 @@ document.addEventListener('DOMContentLoaded', function () {
     mostrarVista('vista-inicio');
   });
   document.getElementById('boton-volver-jornada-detalle').addEventListener('click', irAVistaJornadas);
-  document.getElementById('boton-nueva-jornada').addEventListener('click', abrirModalJornada);
+  document.getElementById('boton-nueva-jornada').addEventListener('click', function () {
+    abrirModalJornada();
+  });
+  document.getElementById('boton-editar-jornada').addEventListener('click', function () {
+    abrirModalJornada(jornadaActual);
+  });
+  document.getElementById('boton-borrar-jornada').addEventListener('click', function () {
+    borrarJornadaConConfirmacion(jornadaActual);
+  });
   document.getElementById('boton-cancelar-jornada').addEventListener('click', cerrarModalJornada);
   document.getElementById('formulario-jornada').addEventListener('submit', manejarEnvioJornada);
   document.getElementById('filtro-jornadas').addEventListener('change', pintarJornadasFiltradas);

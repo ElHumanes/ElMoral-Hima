@@ -131,7 +131,28 @@ function obtenerResumenInicio(sesion) {
       };
     });
 
-    return { rol: 'CAPITAN', convocatorias: convocatorias };
+    // El capitán también es (normalmente) un jugador más: aparte del panel de
+    // gestión, le hace falta poder decir si él mismo va a poder jugar.
+    var miConvocatoria = null;
+    if (sesion.id_jugador) {
+      var miFichaCapitan = leerFilas('JUGADORES').filter(function (j) { return j.id_jugador === sesion.id_jugador; })[0];
+      if (miFichaCapitan && miFichaCapitan.no_convocable !== true) {
+        var primeraAbierta = abiertas[0];
+        var miFilaCapitan = todasRespuestas.filter(function (c) {
+          return c.id_jornada === primeraAbierta.id_jornada && c.id_jugador === sesion.id_jugador;
+        })[0];
+        miConvocatoria = {
+          id_jornada: primeraAbierta.id_jornada,
+          rival: primeraAbierta.rival,
+          fecha: primeraAbierta.fecha,
+          lugar: primeraAbierta.lugar,
+          local_visitante: primeraAbierta.local_visitante,
+          mi_respuesta: miFilaCapitan ? miFilaCapitan.disponibilidad : 'PENDIENTE'
+        };
+      }
+    }
+
+    return { rol: 'CAPITAN', convocatorias: convocatorias, mi_convocatoria: miConvocatoria };
   }
 
   // JUGADOR

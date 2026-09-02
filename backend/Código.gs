@@ -60,6 +60,12 @@ function manejarPeticion(e) {
       case 'crearJornada':
         return respuestaJson(crearJornada(requerirSesionValida(params.token), params));
 
+      case 'editarJornada':
+        return respuestaJson(editarJornada(requerirSesionValida(params.token), params));
+
+      case 'eliminarJornada':
+        return respuestaJson(eliminarJornada(requerirSesionValida(params.token), params.id_jornada));
+
       case 'cambiarEstadoJornada':
         return respuestaJson(cambiarEstadoJornada(requerirSesionValida(params.token), params.id_jornada, params.nuevo_estado));
 
