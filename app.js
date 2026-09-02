@@ -2623,5 +2623,15 @@ document.addEventListener('DOMContentLoaded', function () {
       // Si falla el registro (por ejemplo, en un navegador que no lo soporta bien),
       // la app sigue funcionando igual, simplemente sin modo sin conexión.
     });
+
+    // En cuanto haya una versión nueva del Service Worker lista y tome el
+    // control, recargamos solos una vez — así nadie se queda con una copia
+    // vieja de la app hasta que se le ocurra cerrarla y volver a abrirla.
+    var _yaRecargandoPorSW = false;
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (_yaRecargandoPorSW) return;
+      _yaRecargandoPorSW = true;
+      window.location.reload();
+    });
   }
 });
