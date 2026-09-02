@@ -2548,6 +2548,7 @@ document.addEventListener('DOMContentLoaded', function () {
   document.getElementById('filtro-jornadas').addEventListener('change', pintarJornadasFiltradas);
 
   document.getElementById('boton-ir-perfil').addEventListener('click', irAVistaPerfil);
+  document.getElementById('boton-ir-perfil-capitan').addEventListener('click', irAVistaPerfil);
   document.getElementById('boton-volver-perfil').addEventListener('click', function () {
     mostrarVista('vista-inicio');
   });
