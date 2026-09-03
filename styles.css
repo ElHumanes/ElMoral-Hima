@@ -13,6 +13,37 @@
   --color-success: #16A34A;
   --radius: 16px;
   --sombra: 0 2px 10px rgba(20, 40, 60, 0.08);
+  color-scheme: light;
+}
+
+/* Modo oscuro: se activa solo si el sistema/navegador del jugador lo pide.
+   Sin esto, algunos móviles "inventan" un oscuro automático por su cuenta
+   (oscureciendo el fondo pero dejando intactas las fotos de los
+   patrocinadores), que queda peor que tener uno propio bien hecho. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-primary: #2CA8E8;
+    --color-primary-dark: #57BBEE;
+    --color-bg: #12171C;
+    --color-surface: #1C232B;
+    --color-text: #EDF1F4;
+    --color-text-muted: #93A0AB;
+    --color-border: #2E3740;
+    --color-danger: #F87171;
+    --color-danger-bg: #3A1A1A;
+    --color-success: #4ADE80;
+    --sombra: 0 2px 10px rgba(0, 0, 0, 0.35);
+    color-scheme: dark;
+  }
+
+  /* Ese ámbar oscuro se leía bien sobre el tinte ámbar clarito del modo
+     claro, pero se pierde sobre el mismo tinte ya oscurecido; en modo
+     oscuro hace falta un ámbar más vivo para que el contraste siga
+     funcionando. */
+  .insignia-estado-cerrada,
+  .insignia-compat-regular {
+    color: #FBBF24;
+  }
 }
 
 * {
@@ -304,8 +335,11 @@ body {
 }
 
 .patrocinador-tarjeta {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  /* Fondo fijo (no la variable de tema): los logos de los patrocinadores
+     llevan su propio fondo claro incorporado a la imagen, así que la
+     tarjeta tiene que quedarse siempre clara, también en modo oscuro. */
+  background: #FFFFFF;
+  border: 1px solid #E2E6EA;
   border-radius: 12px;
   padding: 8px 14px;
   display: flex;
