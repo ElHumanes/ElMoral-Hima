@@ -61,14 +61,15 @@ function guardarSeleccion(sesion, idJornada, idsJugadores) {
   try {
     eliminarFilas('SELECCIONADOS', 'id_jornada', idJornada);
 
-    idsJugadores.forEach(function (idJugador) {
-      agregarFila('SELECCIONADOS', {
+    var filasSeleccionados = idsJugadores.map(function (idJugador) {
+      return {
         id_seleccion: generarId(),
         id_jornada: idJornada,
         id_jugador: idJugador,
         fecha_seleccion: ahoraIso()
-      });
+      };
     });
+    agregarFilas('SELECCIONADOS', filasSeleccionados);
 
     actualizarFila('JORNADAS', 'id_jornada', idJornada, { estado: 'CONFIRMADA' });
     registrarLog(sesion.id_usuario, 'SELECCIONAR_JUGADORES', idJornada + ' -> 10 jugadores');

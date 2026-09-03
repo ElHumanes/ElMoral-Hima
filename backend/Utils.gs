@@ -25,8 +25,47 @@ var _sheetCache = {};
 // datos ya desactualizados dentro de la misma ejecución.
 var _filasCache = {};
 
+// Caché COMPARTIDA entre peticiones distintas (CacheService, no memoria del
+// proceso): sin esto, cada clic en la app es una ejecución nueva de Apps
+// Script que no sabe nada de la anterior, así que SIEMPRE volvía a leer
+// SESIONES y USUARIOS enteras solo para validar el token, antes incluso de
+// hacer lo que se había pedido. Con esto, si la hoja no ha cambiado en los
+// últimos segundos, se sirve desde esta caché en vez de volver a pedirla a
+// Sheets. Se invalida (borra) en cuanto se escribe algo en esa pestaña, igual
+// que la caché de arriba, así que nunca se sirve más desactualizada de lo que
+// tarda la siguiente escritura.
+var _CACHE_COMPARTIDA_SEGUNDOS = 60;
+
+function _claveCacheCompartida(nombreHoja) {
+  return 'filas_' + nombreHoja;
+}
+
+function _leerFilasDeCacheCompartida(nombreHoja) {
+  try {
+    var texto = CacheService.getScriptCache().get(_claveCacheCompartida(nombreHoja));
+    return texto ? JSON.parse(texto) : null;
+  } catch (err) {
+    return null;
+  }
+}
+
+function _guardarFilasEnCacheCompartida(nombreHoja, filas) {
+  try {
+    CacheService.getScriptCache().put(_claveCacheCompartida(nombreHoja), JSON.stringify(filas), _CACHE_COMPARTIDA_SEGUNDOS);
+  } catch (err) {
+    // Si la pestaña pesa más de lo que admite una clave de CacheService (100 KB),
+    // simplemente no se cachea entre peticiones: sigue funcionando igual que
+    // antes, solo que sin este segundo nivel de caché para esa pestaña en concreto.
+  }
+}
+
 function invalidarCacheFilas(nombreHoja) {
   delete _filasCache[nombreHoja];
+  try {
+    CacheService.getScriptCache().remove(_claveCacheCompartida(nombreHoja));
+  } catch (err) {
+    // No pasa nada si falla borrar la caché compartida.
+  }
 }
 
 /**
@@ -64,12 +103,19 @@ function getSheet(nombreHoja) {
 function leerFilas(nombreHoja) {
   if (_filasCache[nombreHoja]) return _filasCache[nombreHoja].slice();
 
+  var filas = _leerFilasDeCacheCompartida(nombreHoja);
+  if (!filas) {
+    filas = _leerFilasDesdeHoja(nombreHoja);
+    _guardarFilasEnCacheCompartida(nombreHoja, filas);
+  }
+  _filasCache[nombreHoja] = filas;
+  return filas.slice();
+}
+
+function _leerFilasDesdeHoja(nombreHoja) {
   var hoja = getSheet(nombreHoja);
   var datos = hoja.getDataRange().getValues();
-  if (datos.length < 2) {
-    _filasCache[nombreHoja] = [];
-    return [];
-  }
+  if (datos.length < 2) return [];
 
   var cabeceras = datos[0];
   var filas = [];
@@ -85,8 +131,7 @@ function leerFilas(nombreHoja) {
     obj._fila = i + 1; // número de fila real en la hoja (1-indexado), útil para actualizar
     filas.push(obj);
   }
-  _filasCache[nombreHoja] = filas;
-  return filas.slice();
+  return filas;
 }
 
 /**
@@ -110,12 +155,27 @@ function normalizarValorCelda(valor) {
  * Las cabeceras sin valor en el objeto se dejan en blanco.
  */
 function agregarFila(nombreHoja, objeto) {
+  agregarFilas(nombreHoja, [objeto]);
+}
+
+/**
+ * Igual que agregarFila, pero añade varias filas de golpe en una sola
+ * escritura a la hoja, en vez de una llamada a Sheets por fila. Se usa
+ * siempre que hay que crear varias filas seguidas (por ejemplo, las 10
+ * personas seleccionadas para una jornada, o las 5 parejas de un partido),
+ * que si no salía notablemente más lento.
+ */
+function agregarFilas(nombreHoja, objetos) {
+  if (!objetos || objetos.length === 0) return;
   var hoja = getSheet(nombreHoja);
   var cabeceras = hoja.getRange(1, 1, 1, hoja.getLastColumn()).getValues()[0];
-  var fila = cabeceras.map(function (clave) {
-    return objeto.hasOwnProperty(clave) ? objeto[clave] : '';
+  var filas = objetos.map(function (objeto) {
+    return cabeceras.map(function (clave) {
+      return objeto.hasOwnProperty(clave) ? objeto[clave] : '';
+    });
   });
-  hoja.appendRow(fila);
+  var primeraFilaLibre = hoja.getLastRow() + 1;
+  hoja.getRange(primeraFilaLibre, 1, filas.length, cabeceras.length).setValues(filas);
   invalidarCacheFilas(nombreHoja);
 }
 
@@ -124,6 +184,25 @@ function agregarFila(nombreHoja, objeto) {
  * los campos indicados en "cambios". Devuelve true si encontró y actualizó algo.
  */
 function actualizarFila(nombreHoja, columnaId, valorId, cambios) {
+  var mapaCambios = {};
+  mapaCambios[valorId] = cambios;
+  return actualizarFilasEnLote(nombreHoja, columnaId, mapaCambios) > 0;
+}
+
+/**
+ * Igual que actualizarFila, pero aplica los cambios de varias filas a la vez
+ * (identificadas por columnaId) en una sola escritura a la hoja, en vez de
+ * una llamada a Sheets por fila. Se usa cuando hay que actualizar muchas
+ * filas seguidas (por ejemplo, la puntuación de todos los jugadores), que
+ * si no salía muy lento por ser tantos viajes de ida y vuelta a Sheets.
+ *
+ * mapaCambios: { valorId: { campo: valorNuevo, ... }, ... }
+ * Devuelve cuántas filas se han actualizado.
+ */
+function actualizarFilasEnLote(nombreHoja, columnaId, mapaCambios) {
+  var ids = Object.keys(mapaCambios);
+  if (ids.length === 0) return 0;
+
   var hoja = getSheet(nombreHoja);
   var datos = hoja.getDataRange().getValues();
   var cabeceras = datos[0];
@@ -132,27 +211,49 @@ function actualizarFila(nombreHoja, columnaId, valorId, cambios) {
     throw new Error('La pestaña "' + nombreHoja + '" no tiene columna "' + columnaId + '".');
   }
 
+  var actualizadas = 0;
   for (var i = 1; i < datos.length; i++) {
-    if (datos[i][colIndice] === valorId) {
-      for (var clave in cambios) {
-        var colCambio = cabeceras.indexOf(clave);
-        if (colCambio !== -1) {
-          hoja.getRange(i + 1, colCambio + 1).setValue(cambios[clave]);
-        }
-      }
-      invalidarCacheFilas(nombreHoja);
-      return true;
+    var cambios = mapaCambios[datos[i][colIndice]];
+    if (!cambios) continue;
+    for (var clave in cambios) {
+      var colCambio = cabeceras.indexOf(clave);
+      if (colCambio !== -1) datos[i][colCambio] = cambios[clave];
     }
+    actualizadas++;
   }
-  return false;
+
+  if (actualizadas > 0) {
+    hoja.getRange(1, 1, datos.length, cabeceras.length).setValues(datos);
+    invalidarCacheFilas(nombreHoja);
+  }
+  return actualizadas;
 }
 
 /**
  * Elimina todas las filas donde la columna "columnaId" vale "valorId".
- * Recorre de abajo hacia arriba para que borrar una fila no desordene los
- * índices de las siguientes.
  */
 function eliminarFilas(nombreHoja, columnaId, valorId) {
+  eliminarFilasEnValores(nombreHoja, columnaId, [valorId]);
+}
+
+/**
+ * Igual que eliminarFilas, pero borra las filas que coincidan con
+ * CUALQUIERA de varios valores a la vez (columnaId en valoresId), leyendo la
+ * hoja una sola vez en vez de una vez por cada valor. Se usa por ejemplo al
+ * rehacer las parejas de una jornada, para borrar de golpe los resultados de
+ * varios partidos anteriores.
+ *
+ * Además, si las filas a borrar están seguidas unas de otras (lo normal
+ * cuando se borran de golpe, por ejemplo, las filas que se acaban de crear
+ * juntas), se borran en un solo tramo en vez de fila a fila — borrar de
+ * Sheets desplaza todas las filas de abajo, así que hacerlo fila a fila sale
+ * notablemente más lento cuantas más filas hay que borrar.
+ */
+function eliminarFilasEnValores(nombreHoja, columnaId, valoresId) {
+  if (!valoresId || valoresId.length === 0) return;
+  var conjunto = {};
+  valoresId.forEach(function (v) { conjunto[v] = true; });
+
   var hoja = getSheet(nombreHoja);
   var datos = hoja.getDataRange().getValues();
   var cabeceras = datos[0];
@@ -161,14 +262,38 @@ function eliminarFilas(nombreHoja, columnaId, valorId) {
     throw new Error('La pestaña "' + nombreHoja + '" no tiene columna "' + columnaId + '".');
   }
 
-  var borrada = false;
-  for (var i = datos.length - 1; i >= 1; i--) {
-    if (datos[i][colIndice] === valorId) {
-      hoja.deleteRow(i + 1);
-      borrada = true;
+  // Números de fila reales (1-indexado) a borrar, de menor a mayor.
+  var filasABorrar = [];
+  for (var i = 1; i < datos.length; i++) {
+    if (conjunto[datos[i][colIndice]]) filasABorrar.push(i + 1);
+  }
+  if (filasABorrar.length === 0) return;
+
+  // Se agrupan en tramos consecutivos (p. ej. [5,6,7,10] -> [5-7], [10]) y se
+  // borran de abajo hacia arriba para que borrar un tramo no desordene los
+  // números de fila de los tramos que quedan por borrar.
+  var tramos = [];
+  var inicio = filasABorrar[0];
+  var anterior = filasABorrar[0];
+  for (var k = 1; k < filasABorrar.length; k++) {
+    var fila = filasABorrar[k];
+    if (fila === anterior + 1) {
+      anterior = fila;
+    } else {
+      tramos.push([inicio, anterior]);
+      inicio = fila;
+      anterior = fila;
     }
   }
-  if (borrada) invalidarCacheFilas(nombreHoja);
+  tramos.push([inicio, anterior]);
+
+  for (var t = tramos.length - 1; t >= 0; t--) {
+    var desde = tramos[t][0];
+    var cantidad = tramos[t][1] - tramos[t][0] + 1;
+    hoja.deleteRows(desde, cantidad);
+  }
+
+  invalidarCacheFilas(nombreHoja);
 }
 
 /**

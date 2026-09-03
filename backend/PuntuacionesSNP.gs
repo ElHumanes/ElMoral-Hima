@@ -74,6 +74,7 @@ function actualizarPuntuacionesSNP() {
   var jugadores = leerFilas('JUGADORES').filter(function (j) { return j.estado === 'ACTIVO'; });
   var actualizados = [];
   var sinEncontrar = [];
+  var cambiosPorJugador = {};
 
   jugadores.forEach(function (j) {
     try {
@@ -81,7 +82,7 @@ function actualizarPuntuacionesSNP() {
       if (puntos === null) {
         sinEncontrar.push(j.nombre_completo);
       } else if (Number(j.puntuacion) !== puntos) {
-        actualizarFila('JUGADORES', 'id_jugador', j.id_jugador, { puntuacion: puntos });
+        cambiosPorJugador[j.id_jugador] = { puntuacion: puntos };
         actualizados.push(j.nombre_completo + ': ' + j.puntuacion + ' -> ' + puntos);
       }
     } catch (err) {
@@ -89,6 +90,10 @@ function actualizarPuntuacionesSNP() {
     }
     Utilities.sleep(300); // no saturar la web de la SNP con peticiones seguidas
   });
+
+  // Se escriben todas las puntuaciones cambiadas de una sola vez al final,
+  // en vez de una escritura suelta por jugador dentro del bucle de arriba.
+  actualizarFilasEnLote('JUGADORES', 'id_jugador', cambiosPorJugador);
 
   var resumen = actualizados.length + ' actualizados, ' + sinEncontrar.length + ' sin encontrar en el ranking.';
   Logger.log('Actualizados: ' + (actualizados.join(' | ') || 'ninguno'));

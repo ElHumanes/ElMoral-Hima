@@ -193,15 +193,20 @@ function guardarParejas(sesion, idJornada, parejas) {
     // Al rehacer las parejas de una jornada, se limpian también sus partidos
     // y resultados anteriores, para no dejar datos huérfanos de una versión previa.
     var partidosAnteriores = leerFilas('PARTIDOS').filter(function (p) { return p.id_jornada === idJornada; });
-    partidosAnteriores.forEach(function (p) { eliminarFilas('RESULTADOS', 'id_partido', p.id_partido); });
+    var idsPartidosAnteriores = partidosAnteriores.map(function (p) { return p.id_partido; });
+    if (idsPartidosAnteriores.length > 0) {
+      eliminarFilasEnValores('RESULTADOS', 'id_partido', idsPartidosAnteriores);
+    }
     eliminarFilas('PARTIDOS', 'id_jornada', idJornada);
     eliminarFilas('PAREJAS', 'id_jornada', idJornada);
 
+    var filasPareja = [];
+    var filasPartido = [];
     parejasCalculadas.forEach(function (p, indice) {
       var idPareja = generarId();
       var numeroPartido = indice + 1;
 
-      agregarFila('PAREJAS', {
+      filasPareja.push({
         id_pareja: idPareja,
         id_jornada: idJornada,
         id_jugador_a: p.id_jugador_a,
@@ -212,13 +217,15 @@ function guardarParejas(sesion, idJornada, parejas) {
         indice_pareja: ''
       });
 
-      agregarFila('PARTIDOS', {
+      filasPartido.push({
         id_partido: generarId(),
         id_jornada: idJornada,
         id_pareja: idPareja,
         numero_partido: numeroPartido
       });
     });
+    agregarFilas('PAREJAS', filasPareja);
+    agregarFilas('PARTIDOS', filasPartido);
 
     registrarLog(sesion.id_usuario, 'GUARDAR_PAREJAS', idJornada + ' -> 5 parejas y 5 partidos');
   } finally {
