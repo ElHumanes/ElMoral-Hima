@@ -251,8 +251,3 @@ function respuestaOk(datos) {
 function respuestaError(mensaje) {
   return respuestaJson({ ok: false, error: mensaje });
 }
-
-/** Construye una respuesta HTML (para páginas abiertas directamente en el navegador, no llamadas de la app). */
-function respuestaHtml(html) {
-  return HtmlService.createHtmlOutput(html);
-}

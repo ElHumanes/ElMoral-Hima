@@ -242,23 +242,23 @@ function confirmarAsistenciaPorEnlace(params) {
   var token = params.tok;
 
   if (!idJugador || !idJornada || !disponibilidad || !token) {
-    return paginaConfirmacion('Enlace incompleto', 'Este enlace no es válido. Entra en la app para responder.', false);
+    return respuestaJson({ ok: false, titulo: 'Enlace incompleto', mensaje: 'Este enlace no es válido. Entra en la app para responder.' });
   }
   if (token !== tokenRespuestaEnlace(idJugador, idJornada)) {
-    return paginaConfirmacion('Enlace no válido', 'Este enlace no es válido o ha caducado. Entra en la app para responder.', false);
+    return respuestaJson({ ok: false, titulo: 'Enlace no válido', mensaje: 'Este enlace no es válido o ha caducado. Entra en la app para responder.' });
   }
 
   var jugador = leerFilas('JUGADORES').filter(function (j) { return j.id_jugador === idJugador; })[0];
   if (!jugador) {
-    return paginaConfirmacion('Jugador no encontrado', 'No se ha encontrado tu ficha de jugador. Entra en la app o avisa al capitán.', false);
+    return respuestaJson({ ok: false, titulo: 'Jugador no encontrado', mensaje: 'No se ha encontrado tu ficha de jugador. Entra en la app o avisa al capitán.' });
   }
 
   var jornada = leerFilas('JORNADAS').filter(function (j) { return j.id_jornada === idJornada; })[0];
   if (!jornada) {
-    return paginaConfirmacion('Jornada no encontrada', 'No se ha encontrado esa jornada.', false);
+    return respuestaJson({ ok: false, titulo: 'Jornada no encontrada', mensaje: 'No se ha encontrado esa jornada.' });
   }
   if (jornada.estado !== 'CONVOCATORIA_ABIERTA') {
-    return paginaConfirmacion('Convocatoria cerrada', 'La convocatoria de esta jornada ya no está abierta. Si necesitas cambiar tu respuesta, entra en la app.', false);
+    return respuestaJson({ ok: false, titulo: 'Convocatoria cerrada', mensaje: 'La convocatoria de esta jornada ya no está abierta. Si necesitas cambiar tu respuesta, entra en la app.' });
   }
 
   var lock = LockService.getScriptLock();
@@ -293,31 +293,7 @@ function confirmarAsistenciaPorEnlace(params) {
     ? '¡Perfecto, ' + (jugador.apodo || jugador.nombre) + '! Quedas apuntado/a a ' + notifTextoJornada(jornada) + '.'
     : 'Vale, ' + (jugador.apodo || jugador.nombre) + '. Quedas como no disponible para ' + notifTextoJornada(jornada) + '.';
 
-  return paginaConfirmacion('Respuesta registrada', mensaje, true);
-}
-
-/** Página sencilla que se ve al hacer clic en el enlace del email, sin salir a la app. */
-function paginaConfirmacion(titulo, mensaje, exito) {
-  var color = exito ? '#2e7d32' : '#c62828';
-  var icono = exito ? '✅' : '⚠️';
-  var html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">' +
-    '<meta name="viewport" content="width=device-width, initial-scale=1">' +
-    '<title>' + titulo + '</title>' +
-    '<style>' +
-    'body{font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#f4f6f8;margin:0;padding:40px 20px;display:flex;justify-content:center;}' +
-    '.tarjeta{background:#fff;border-radius:16px;padding:32px 24px;max-width:420px;width:100%;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,0.08);}' +
-    '.icono{font-size:48px;margin-bottom:12px;}' +
-    'h1{font-size:20px;color:' + color + ';margin:0 0 12px;}' +
-    'p{font-size:16px;color:#333;line-height:1.5;margin:0 0 24px;}' +
-    'a.boton{display:inline-block;background:#1b5e20;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;font-weight:600;}' +
-    '</style></head><body>' +
-    '<div class="tarjeta">' +
-    '<div class="icono">' + icono + '</div>' +
-    '<h1>' + titulo + '</h1>' +
-    '<p>' + mensaje + '</p>' +
-    '<a class="boton" href="' + NOTIF_APP_URL + '">Abrir la app</a>' +
-    '</div></body></html>';
-  return respuestaHtml(html);
+  return respuestaJson({ ok: true, titulo: 'Respuesta registrada', mensaje: mensaje });
 }
 
 /* ========================================================================

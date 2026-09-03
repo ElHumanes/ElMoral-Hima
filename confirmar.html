@@ -4,20 +4,57 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Confirmar asistencia - El Moral</title>
+  <style>
+    body {
+      font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+      background: #f4f6f8;
+      margin: 0;
+      padding: 40px 20px;
+      display: flex;
+      justify-content: center;
+    }
+    .tarjeta {
+      background: #fff;
+      border-radius: 16px;
+      padding: 32px 24px;
+      max-width: 420px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    }
+    .icono { font-size: 48px; margin-bottom: 12px; }
+    h1 { font-size: 20px; margin: 0 0 12px; }
+    h1.exito { color: #2e7d32; }
+    h1.error { color: #c62828; }
+    p { font-size: 16px; color: #333; line-height: 1.5; margin: 0 0 24px; }
+    a.boton {
+      display: inline-block;
+      background: #1b5e20;
+      color: #fff;
+      text-decoration: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+    }
+  </style>
 </head>
 <body>
-  <p style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;text-align:center;margin-top:60px;color:#666;">
-    Confirmando...
-  </p>
+  <div class="tarjeta">
+    <div class="icono" id="icono">⏳</div>
+    <h1 id="titulo">Confirmando...</h1>
+    <p id="mensaje"></p>
+    <a class="boton" id="boton-app" href="https://elhumanes.github.io/ElMoral-Hima/">Abrir la app</a>
+  </div>
+
   <script>
     (function () {
-      // Los enlaces del email apuntan aquí (una página normal de GitHub Pages)
-      // en vez de directamente a script.google.com, porque algunas apps de
+      // Los enlaces del email traen aquí (una página normal de GitHub Pages)
+      // en vez de ir directamente a script.google.com, porque algunas apps de
       // correo en el móvil (Gmail, Mail de iOS...) interceptan los enlaces a
-      // script.google.com y los intentan abrir como si fueran un archivo de
-      // Google Drive, dando un error de "No se puede abrir el archivo".
-      // Al ser un enlace normal a nuestra propia web, eso no pasa; aquí dentro
-      // ya pedimos la confirmación real al backend con una llamada normal.
+      // script.google.com y los intentan abrir como un archivo de Google
+      // Drive, dando un error de "No se puede abrir el archivo". Aquí dentro
+      // pedimos la confirmación real al backend con una llamada normal y
+      // pintamos el resultado nosotros mismos.
       var API_URL = 'https://script.google.com/macros/s/AKfycbyNesOIcXqUElt02t1eCSDdTJSJwcQN6Rr_lnUgpz2rjibh1qHHrLRPwQdciWANpXhj/exec';
       var params = new URLSearchParams(window.location.search);
       var cuerpo = {
@@ -28,17 +65,21 @@
         resp: params.get('resp') || ''
       };
 
+      function pintar(exito, titulo, mensaje) {
+        document.getElementById('icono').textContent = exito ? '✅' : '⚠️';
+        var elTitulo = document.getElementById('titulo');
+        elTitulo.textContent = titulo;
+        elTitulo.className = exito ? 'exito' : 'error';
+        document.getElementById('mensaje').textContent = mensaje;
+      }
+
       fetch(API_URL, { method: 'POST', body: JSON.stringify(cuerpo) })
-        .then(function (r) { return r.text(); })
-        .then(function (html) {
-          document.open();
-          document.write(html);
-          document.close();
+        .then(function (r) { return r.json(); })
+        .then(function (r) {
+          pintar(!!r.ok, r.titulo || (r.ok ? 'Listo' : 'Ha habido un problema'), r.mensaje || '');
         })
         .catch(function () {
-          document.body.innerHTML =
-            '<p style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;text-align:center;margin-top:60px;color:#c62828;">' +
-            'No se ha podido conectar. Comprueba tu conexión e inténtalo de nuevo, o entra en la app.</p>';
+          pintar(false, 'No se ha podido conectar', 'Comprueba tu conexión e inténtalo de nuevo, o entra en la app.');
         });
     })();
   </script>
