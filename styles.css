@@ -16,12 +16,13 @@
   color-scheme: light;
 }
 
-/* Modo oscuro: se activa solo si el sistema/navegador del jugador lo pide.
-   Sin esto, algunos móviles "inventan" un oscuro automático por su cuenta
-   (oscureciendo el fondo pero dejando intactas las fotos de los
-   patrocinadores), que queda peor que tener uno propio bien hecho. */
+/* Modo oscuro: por defecto sigue lo que pida el sistema/navegador del
+   jugador (esta regla), pero se puede forzar a mano con el botón de la
+   cabecera — ver el bloque [data-theme="dark"] más abajo, que gana siempre
+   a esta preferencia automática tanto para forzar oscuro como para forzar
+   claro aunque el sistema pida oscuro (con [data-theme="light"]). */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --color-primary: #2CA8E8;
     --color-primary-dark: #57BBEE;
     --color-bg: #12171C;
@@ -40,10 +41,32 @@
      claro, pero se pierde sobre el mismo tinte ya oscurecido; en modo
      oscuro hace falta un ámbar más vivo para que el contraste siga
      funcionando. */
-  .insignia-estado-cerrada,
-  .insignia-compat-regular {
+  :root:not([data-theme="light"]) .insignia-estado-cerrada,
+  :root:not([data-theme="light"]) .insignia-compat-regular {
     color: #FBBF24;
   }
+}
+
+/* Mismos valores que arriba, pero forzados a mano desde el botón de la
+   cabecera (independientemente de lo que pida el sistema). */
+:root[data-theme="dark"] {
+  --color-primary: #2CA8E8;
+  --color-primary-dark: #57BBEE;
+  --color-bg: #12171C;
+  --color-surface: #1C232B;
+  --color-text: #EDF1F4;
+  --color-text-muted: #93A0AB;
+  --color-border: #2E3740;
+  --color-danger: #F87171;
+  --color-danger-bg: #3A1A1A;
+  --color-success: #4ADE80;
+  --sombra: 0 2px 10px rgba(0, 0, 0, 0.35);
+  color-scheme: dark;
+}
+
+:root[data-theme="dark"] .insignia-estado-cerrada,
+:root[data-theme="dark"] .insignia-compat-regular {
+  color: #FBBF24;
 }
 
 * {
@@ -119,6 +142,26 @@ body {
   height: 30px;
   width: auto;
   display: block;
+}
+
+.boton-tema {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  font-size: 16px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.boton-tema:hover {
+  border-color: var(--color-primary);
 }
 
 .contenedor {

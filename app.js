@@ -9,6 +9,36 @@ var CONFIG = {
   CLAVE_TOKEN: 'padel_app_token'
 };
 
+/**
+ * Tema claro/oscuro: por defecto sigue al sistema (el CSS ya lo hace solo
+ * con prefers-color-scheme); si el jugador toca el botón, se guarda su
+ * elección explícita en este navegador y a partir de ahí manda siempre a
+ * esa, sea cual sea el tema del sistema.
+ */
+var CLAVE_TEMA = 'padel_app_tema';
+
+function temaEfectivo() {
+  var guardado = null;
+  try { guardado = localStorage.getItem(CLAVE_TEMA); } catch (e) {}
+  if (guardado === 'light' || guardado === 'dark') return guardado;
+  return (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+}
+
+function actualizarBotonTema() {
+  var boton = document.getElementById('boton-tema');
+  if (!boton) return;
+  var oscuro = temaEfectivo() === 'dark';
+  boton.textContent = oscuro ? '☀️' : '🌙';
+  boton.title = oscuro ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro';
+}
+
+function alternarTema() {
+  var nuevo = temaEfectivo() === 'dark' ? 'light' : 'dark';
+  try { localStorage.setItem(CLAVE_TEMA, nuevo); } catch (e) {}
+  document.documentElement.setAttribute('data-theme', nuevo);
+  actualizarBotonTema();
+}
+
 var POSICIONES_TEXTO = {
   DERECHA: 'Derecha',
   'REVÉS': 'Revés',
@@ -2679,6 +2709,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
   document.getElementById('boton-cancelar-resultado').addEventListener('click', cerrarModalResultado);
   document.getElementById('formulario-resultado').addEventListener('submit', manejarEnvioResultado);
+
+  actualizarBotonTema();
+  document.getElementById('boton-tema').addEventListener('click', alternarTema);
 
   comprobarSesionAlCargar();
 

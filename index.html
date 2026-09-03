@@ -12,7 +12,21 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Padel App">
-  <link rel="stylesheet" href="styles.css?v=2">
+  <link rel="stylesheet" href="styles.css?v=3">
+  <script>
+    // Aplicar el tema guardado ANTES de pintar la página, para que no se
+    // vea un parpadeo del tema equivocado al cargar. Si no hay nada
+    // guardado, no se toca nada y manda la preferencia del sistema (la CSS
+    // ya sabe seguirla sola).
+    (function () {
+      try {
+        var tema = localStorage.getItem('padel_app_tema');
+        if (tema === 'light' || tema === 'dark') {
+          document.documentElement.setAttribute('data-theme', tema);
+        }
+      } catch (e) {}
+    })();
+  </script>
 </head>
 <body>
 
@@ -25,6 +39,7 @@
       <a class="cabecera-derecha" href="https://seriesnacionalesdepadel.com/" target="_blank" rel="noopener noreferrer" title="Series Nacionales de Pádel">
         <img src="assets/logo-snp.png" alt="Series Nacionales de Pádel" class="logo-torneo">
       </a>
+      <button type="button" class="boton-tema" id="boton-tema" title="Cambiar a modo oscuro" aria-label="Cambiar entre modo claro y oscuro">🌙</button>
     </div>
   </header>
 
@@ -621,6 +636,6 @@
     </div>
   </footer>
 
-  <script src="app.js?v=1"></script>
+  <script src="app.js?v=2"></script>
 </body>
 </html>
