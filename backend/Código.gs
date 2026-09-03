@@ -25,14 +25,23 @@ function manejarPeticion(e) {
         return respuestaOk({ mensaje: 'pong', fecha: ahoraIso() });
 
       case 'login':
-        return respuestaJson(login(params.nombreUsuario, params.codigoAcceso));
+        var resultadoLogin = login(params.nombreUsuario, params.codigoAcceso);
+        if (resultadoLogin.ok) {
+          // Se incluye ya aquí el resumen de convocatorias de la pantalla de
+          // inicio para no tener que pedirlo aparte justo después: así al
+          // entrar en la app hace falta un solo viaje de ida y vuelta al
+          // servidor en vez de dos seguidos.
+          resultadoLogin.resumen = obtenerResumenInicio(resultadoLogin);
+        }
+        return respuestaJson(resultadoLogin);
 
       case 'logout':
         return respuestaJson(logout(params.token));
 
       case 'validarSesion':
         var sesion = validarSesion(params.token);
-        return sesion ? respuestaOk({ sesion: sesion }) : respuestaError('Sesión no válida o caducada.');
+        if (!sesion) return respuestaError('Sesión no válida o caducada.');
+        return respuestaOk({ sesion: sesion, resumen: obtenerResumenInicio(sesion) });
 
       case 'listarJugadores':
         if (!validarSesion(params.token)) return respuestaError('Sesión no válida o caducada.');

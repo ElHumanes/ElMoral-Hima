@@ -274,7 +274,14 @@ function borrarSesionGuardada() {
   localStorage.removeItem(CONFIG.CLAVE_TOKEN);
 }
 
-function mostrarInicio(datosUsuario) {
+/**
+ * resumenPrecargado (opcional): si login/validarSesion ya han devuelto el
+ * resumen de convocatorias en la misma respuesta, se pinta directamente con
+ * ese dato en vez de volver a pedirlo — así al entrar en la app no hacen
+ * falta dos viajes de ida y vuelta al servidor seguidos (uno para la sesión
+ * y otro para el resumen), sino uno solo.
+ */
+function mostrarInicio(datosUsuario, resumenPrecargado) {
   sesionActual = datosUsuario;
 
   document.getElementById('texto-nombre-usuario').textContent = datosUsuario.apodo || datosUsuario.nombre_usuario;
@@ -288,9 +295,11 @@ function mostrarInicio(datosUsuario) {
   if (datosUsuario.rol === 'CAPITAN') {
     // Una sola llamada resuelve tanto el panel de gestión como (si el
     // capitán también es jugador) su propia tarjeta de "Voy / No puedo".
-    comprobarConvocatoriaAbiertaParaCapitan();
+    if (resumenPrecargado) pintarResumenCapitan(resumenPrecargado);
+    else comprobarConvocatoriaAbiertaParaCapitan();
   } else if (datosUsuario.rol === 'JUGADOR') {
-    comprobarConvocatoriaAbiertaParaJugador();
+    if (resumenPrecargado) pintarResumenJugador(resumenPrecargado);
+    else comprobarConvocatoriaAbiertaParaJugador();
   }
 }
 
@@ -304,7 +313,7 @@ function comprobarSesionAlCargar() {
 
   llamarApi('validarSesion', { token: guardada.token }).then(function (resultado) {
     if (resultado.ok) {
-      mostrarInicio(resultado.sesion);
+      mostrarInicio(resultado.sesion, resultado.resumen);
     } else {
       borrarSesionGuardada();
       mostrarVista('vista-login');
@@ -337,7 +346,7 @@ function manejarEnvioLogin(evento) {
           id_usuario: resultado.id_usuario,
           id_jugador: resultado.id_jugador
         });
-        mostrarInicio(resultado);
+        mostrarInicio(resultado, resultado.resumen);
       } else {
         mensajeError.textContent = resultado.error || 'No se ha podido iniciar sesión.';
         mensajeError.classList.remove('oculto');
@@ -1668,11 +1677,18 @@ function pintarTarjetaConvocatoriaPersonal(abierta) {
 
 function comprobarConvocatoriaAbiertaParaJugador() {
   var guardada = obtenerSesionGuardada();
+  llamarApi('obtenerResumenInicio', { token: guardada.token }).then(pintarResumenJugador);
+}
 
-  llamarApi('obtenerResumenInicio', { token: guardada.token }).then(function (resultado) {
-    if (!resultado.ok) return;
-    pintarTarjetaConvocatoriaPersonal(resultado.resumen.convocatoria);
-  });
+/**
+ * Pinta la tarjeta de "Voy / No puedo" del jugador a partir de una respuesta
+ * de obtenerResumenInicio ya obtenida — o bien pedida aquí (uso normal), o
+ * bien la que ya venía incluida en la respuesta de login/validarSesion (así
+ * se ahorra un segundo viaje de ida y vuelta al servidor justo al entrar).
+ */
+function pintarResumenJugador(resultado) {
+  if (!resultado.ok) return;
+  pintarTarjetaConvocatoriaPersonal(resultado.resumen.convocatoria);
 }
 
 function responderConvocatoria(idJornada, disponibilidad) {
@@ -1697,40 +1713,48 @@ function responderConvocatoria(idJornada, disponibilidad) {
 
 function comprobarConvocatoriaAbiertaParaCapitan() {
   var guardada = obtenerSesionGuardada();
+  llamarApi('obtenerResumenInicio', { token: guardada.token }).then(pintarResumenCapitan);
+}
+
+/**
+ * Pinta el panel de convocatorias abiertas del capitán a partir de una
+ * respuesta de obtenerResumenInicio ya obtenida — igual que
+ * pintarResumenJugador, para poder reutilizar la que ya venga incluida en
+ * login/validarSesion sin tener que volver a pedirla.
+ */
+function pintarResumenCapitan(resultado) {
+  if (!resultado.ok) return;
+
   var tarjeta = document.getElementById('tarjeta-convocatoria-capitan');
   var contenedor = document.getElementById('lista-convocatoria-capitan');
 
-  llamarApi('obtenerResumenInicio', { token: guardada.token }).then(function (resultado) {
-    if (!resultado.ok) return;
+  pintarTarjetaConvocatoriaPersonal(resultado.resumen.mi_convocatoria);
 
-    pintarTarjetaConvocatoriaPersonal(resultado.resumen.mi_convocatoria);
+  var convocatorias = resultado.resumen.convocatorias || [];
+  if (convocatorias.length === 0) {
+    tarjeta.classList.add('oculto');
+    return;
+  }
 
-    var convocatorias = resultado.resumen.convocatorias || [];
-    if (convocatorias.length === 0) {
-      tarjeta.classList.add('oculto');
-      return;
-    }
-
-    tarjeta.classList.remove('oculto');
-    contenedor.innerHTML = '';
-    convocatorias.forEach(function (item) {
-      var fila = document.createElement('div');
-      fila.className = 'jornada-tarjeta';
-      fila.innerHTML =
-        '<div class="jornada-info">' +
-          '<span class="jornada-rival"></span>' +
-          '<span class="jornada-meta"></span>' +
-        '</div>' +
-        '<span class="insignia insignia-posicion">Ver</span>';
-      fila.querySelector('.jornada-rival').textContent =
-        (item.local_visitante === 'LOCAL' ? 'vs ' : '@ ') + item.rival;
-      fila.querySelector('.jornada-meta').textContent =
-        formatearFecha(item.fecha) + ' · ✅ ' + item.apuntados + ' · ❌ ' + item.no_disponibles + ' · ⏳ ' + item.pendientes;
-      fila.addEventListener('click', function () {
-        abrirDetalleJornada(item);
-      });
-      contenedor.appendChild(fila);
+  tarjeta.classList.remove('oculto');
+  contenedor.innerHTML = '';
+  convocatorias.forEach(function (item) {
+    var fila = document.createElement('div');
+    fila.className = 'jornada-tarjeta';
+    fila.innerHTML =
+      '<div class="jornada-info">' +
+        '<span class="jornada-rival"></span>' +
+        '<span class="jornada-meta"></span>' +
+      '</div>' +
+      '<span class="insignia insignia-posicion">Ver</span>';
+    fila.querySelector('.jornada-rival').textContent =
+      (item.local_visitante === 'LOCAL' ? 'vs ' : '@ ') + item.rival;
+    fila.querySelector('.jornada-meta').textContent =
+      formatearFecha(item.fecha) + ' · ✅ ' + item.apuntados + ' · ❌ ' + item.no_disponibles + ' · ⏳ ' + item.pendientes;
+    fila.addEventListener('click', function () {
+      abrirDetalleJornada(item);
     });
+    contenedor.appendChild(fila);
   });
 }
 
