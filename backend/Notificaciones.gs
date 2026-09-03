@@ -72,6 +72,31 @@ function notifEnlacesRespuesta(idJugador, idJornada) {
 }
 
 /**
+ * Versión en HTML del email de convocatoria, con los enlaces de respuesta
+ * como dos botones grandes en vez de texto — se ven y se tocan mucho mejor
+ * en el móvil. `introTexto` es la única frase que cambia entre el aviso de
+ * apertura y el recordatorio.
+ */
+function notifCuerpoHtmlConvocatoria(nombreSaludo, introTexto, jornada, enlaces) {
+  return '' +
+    '<div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;max-width:480px;margin:0 auto;color:#222;">' +
+      '<p style="font-size:16px;">Hola ' + nombreSaludo + ',</p>' +
+      '<p style="font-size:16px;">' + introTexto + '<br>' +
+        '<strong>' + notifTextoJornada(jornada) + '</strong></p>' +
+      '<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;margin:24px 0;">' +
+        '<tr><td style="padding-bottom:12px;">' +
+          '<a href="' + enlaces.si + '" style="display:block;background:#2e7d32;color:#ffffff;text-decoration:none;text-align:center;padding:16px;border-radius:10px;font-weight:bold;font-size:17px;">✅ Sí, voy</a>' +
+        '</td></tr>' +
+        '<tr><td>' +
+          '<a href="' + enlaces.no + '" style="display:block;background:#c62828;color:#ffffff;text-decoration:none;text-align:center;padding:16px;border-radius:10px;font-weight:bold;font-size:17px;">❌ No puedo</a>' +
+        '</td></tr>' +
+      '</table>' +
+      '<p style="font-size:14px;color:#666;">O entra en la app: <a href="' + NOTIF_APP_URL + '">' + NOTIF_APP_URL + '</a></p>' +
+      '<p style="font-size:14px;color:#999;">— El Moral - Hima</p>' +
+    '</div>';
+}
+
+/**
  * Avisa a todos los jugadores activos con email de que se ha abierto una
  * convocatoria nueva. La llama automáticamente cambiarEstadoJornada al
  * abrir la convocatoria (Jornadas.gs); un fallo aquí no debe impedir que la
@@ -84,15 +109,17 @@ function enviarAvisoConvocatoriaAbierta(jornada) {
   var asunto = '🎾 Nueva convocatoria: ' + notifTextoJornada(jornada);
   jugadores.forEach(function (j) {
     var enlaces = notifEnlacesRespuesta(j.id_jugador, jornada.id_jornada);
-    var cuerpo = 'Hola ' + (j.apodo || j.nombre) + ',\n\n' +
+    var nombreSaludo = j.apodo || j.nombre;
+    var cuerpoTexto = 'Hola ' + nombreSaludo + ',\n\n' +
       'Se ha abierto una nueva convocatoria:\n' + notifTextoJornada(jornada) + '\n\n' +
       'Responde con un solo clic:\n' +
       '✅ Sí, voy: ' + enlaces.si + '\n' +
       '❌ No puedo: ' + enlaces.no + '\n\n' +
       'O entra en la app:\n' + NOTIF_APP_URL + '\n\n' +
       '— El Moral - Hima';
+    var cuerpoHtml = notifCuerpoHtmlConvocatoria(nombreSaludo, 'Se ha abierto una nueva convocatoria:', jornada, enlaces);
     try {
-      GmailApp.sendEmail(j.email, asunto, cuerpo, { from: NOTIF_EMAIL_REMITENTE, name: NOTIF_NOMBRE_REMITENTE });
+      GmailApp.sendEmail(j.email, asunto, cuerpoTexto, { htmlBody: cuerpoHtml, from: NOTIF_EMAIL_REMITENTE, name: NOTIF_NOMBRE_REMITENTE });
     } catch (err) {
       Logger.log('No se ha podido avisar por email a ' + j.nombre_completo + ': ' + err.message);
     }
@@ -126,15 +153,17 @@ function enviarRecordatoriosConvocatoria() {
 
     pendientes.forEach(function (j) {
       var enlaces = notifEnlacesRespuesta(j.id_jugador, jornada.id_jornada);
-      var cuerpo = 'Hola ' + (j.apodo || j.nombre) + ',\n\n' +
+      var nombreSaludo = j.apodo || j.nombre;
+      var cuerpoTexto = 'Hola ' + nombreSaludo + ',\n\n' +
         'Todavía no has respondido a esta convocatoria:\n' + notifTextoJornada(jornada) + '\n\n' +
         'Responde con un solo clic:\n' +
         '✅ Sí, voy: ' + enlaces.si + '\n' +
         '❌ No puedo: ' + enlaces.no + '\n\n' +
         'O entra en la app:\n' + NOTIF_APP_URL + '\n\n' +
         '— El Moral - Hima';
+      var cuerpoHtml = notifCuerpoHtmlConvocatoria(nombreSaludo, 'Todavía no has respondido a esta convocatoria:', jornada, enlaces);
       try {
-        GmailApp.sendEmail(j.email, asunto, cuerpo, { from: NOTIF_EMAIL_REMITENTE, name: NOTIF_NOMBRE_REMITENTE });
+        GmailApp.sendEmail(j.email, asunto, cuerpoTexto, { htmlBody: cuerpoHtml, from: NOTIF_EMAIL_REMITENTE, name: NOTIF_NOMBRE_REMITENTE });
       } catch (err) {
         Logger.log('No se ha podido enviar recordatorio a ' + j.nombre_completo + ': ' + err.message);
       }
