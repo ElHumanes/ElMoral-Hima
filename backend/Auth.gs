@@ -43,10 +43,12 @@ function login(nombreUsuario, codigoAcceso) {
     // Aprovechamos cada login para borrar las sesiones ya caducadas de este
     // mismo usuario: si no, la pestaña SESIONES solo crece (cada inicio de
     // sesión añadía una fila que nunca se borraba) y eso hace más lenta
-    // cada comprobación de sesión con el tiempo.
-    leerFilas('SESIONES')
+    // cada comprobación de sesión con el tiempo. Se borran todas de golpe en
+    // vez de una a una.
+    var tokensCaducados = leerFilas('SESIONES')
       .filter(function (s) { return s.id_usuario === usuario.id_usuario && new Date(s.fecha_expiracion).getTime() < ahora.getTime(); })
-      .forEach(function (s) { eliminarFilas('SESIONES', 'token', s.token); });
+      .map(function (s) { return s.token; });
+    eliminarFilasEnValores('SESIONES', 'token', tokensCaducados);
 
     agregarFila('SESIONES', {
       token: token,
