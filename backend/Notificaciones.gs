@@ -52,11 +52,19 @@ function notifFormatearFecha(fechaIso) {
   return partes[2] + '/' + partes[1] + '/' + partes[0];
 }
 
-/** Enlaces de "sí voy" / "no puedo" de un clic para incluir en el email de un jugador concreto. */
+/**
+ * Enlaces de "sí voy" / "no puedo" de un clic para incluir en el email de un
+ * jugador concreto. Apuntan a nuestra propia web (confirmar.html), no
+ * directamente a script.google.com: algunas apps de correo en el móvil
+ * (Gmail, Mail de iOS...) interceptan los enlaces a script.google.com y los
+ * intentan abrir como si fueran un archivo de Google Drive, dando un error
+ * de "No se puede abrir el archivo". confirmar.html es una página normal
+ * que, ya dentro, pide la confirmación real al backend.
+ */
 function notifEnlacesRespuesta(idJugador, idJornada) {
   var token = tokenRespuestaEnlace(idJugador, idJornada);
-  var base = NOTIF_API_URL + '?action=confirmarAsistencia' +
-    '&jug=' + encodeURIComponent(idJugador) +
+  var base = NOTIF_APP_URL + 'confirmar.html' +
+    '?jug=' + encodeURIComponent(idJugador) +
     '&jor=' + encodeURIComponent(idJornada) +
     '&tok=' + encodeURIComponent(token) +
     '&resp=';

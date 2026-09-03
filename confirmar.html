@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Confirmar asistencia - El Moral</title>
+</head>
+<body>
+  <p style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;text-align:center;margin-top:60px;color:#666;">
+    Confirmando...
+  </p>
+  <script>
+    (function () {
+      // Los enlaces del email apuntan aquí (una página normal de GitHub Pages)
+      // en vez de directamente a script.google.com, porque algunas apps de
+      // correo en el móvil (Gmail, Mail de iOS...) interceptan los enlaces a
+      // script.google.com y los intentan abrir como si fueran un archivo de
+      // Google Drive, dando un error de "No se puede abrir el archivo".
+      // Al ser un enlace normal a nuestra propia web, eso no pasa; aquí dentro
+      // ya pedimos la confirmación real al backend con una llamada normal.
+      var API_URL = 'https://script.google.com/macros/s/AKfycbyNesOIcXqUElt02t1eCSDdTJSJwcQN6Rr_lnUgpz2rjibh1qHHrLRPwQdciWANpXhj/exec';
+      var params = new URLSearchParams(window.location.search);
+      var cuerpo = {
+        action: 'confirmarAsistencia',
+        jug: params.get('jug') || '',
+        jor: params.get('jor') || '',
+        tok: params.get('tok') || '',
+        resp: params.get('resp') || ''
+      };
+
+      fetch(API_URL, { method: 'POST', body: JSON.stringify(cuerpo) })
+        .then(function (r) { return r.text(); })
+        .then(function (html) {
+          document.open();
+          document.write(html);
+          document.close();
+        })
+        .catch(function () {
+          document.body.innerHTML =
+            '<p style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;text-align:center;margin-top:60px;color:#c62828;">' +
+            'No se ha podido conectar. Comprueba tu conexión e inténtalo de nuevo, o entra en la app.</p>';
+        });
+    })();
+  </script>
+</body>
+</html>
