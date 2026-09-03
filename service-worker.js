@@ -11,7 +11,7 @@
  *   directas a la red, para que los datos estén siempre al día.
  */
 
-var CACHE_NOMBRE = 'padel-app-cache-v5';
+var CACHE_NOMBRE = 'padel-app-cache-v6';
 
 var ARCHIVOS_PARA_CACHEAR = [
   './',
@@ -19,6 +19,7 @@ var ARCHIVOS_PARA_CACHEAR = [
   './styles.css',
   './app.js',
   './manifest.json',
+  './confirmar.html',
   './assets/logo-club.png',
   './assets/logo-snp.png',
   './assets/logo-hima.png',
@@ -33,7 +34,7 @@ var ARCHIVOS_PARA_CACHEAR = [
 // Se calculan a partir de la propia ubicación del service worker, para que
 // funcione igual tanto si la app vive en la raíz de un dominio (pruebas en
 // local) como en una subcarpeta (GitHub Pages sirve en /padel-app/).
-var ARCHIVOS_ESQUELETO = ['', 'index.html', 'styles.css', 'app.js', 'manifest.json']
+var ARCHIVOS_ESQUELETO = ['', 'index.html', 'styles.css', 'app.js', 'manifest.json', 'confirmar.html']
   .map(function (nombre) { return new URL(nombre, self.location).pathname; });
 
 self.addEventListener('install', function (evento) {
