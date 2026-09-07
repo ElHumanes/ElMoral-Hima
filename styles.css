@@ -555,6 +555,21 @@ body {
   flex-direction: column;
   gap: 6px;
   flex-shrink: 0;
+  width: 92px;
+}
+
+.jugador-acciones .boton-mini {
+  padding: 6px 4px;
+  font-size: 11px;
+  white-space: normal;
+  line-height: 1.25;
+  text-align: center;
+}
+
+.jugador-tarjeta .avatar-mediano {
+  width: 60px;
+  height: 60px;
+  font-size: 22px;
 }
 
 .boton-mini {
