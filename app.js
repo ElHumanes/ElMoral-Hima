@@ -755,6 +755,24 @@ function formatearFecha(fechaIso) {
   return fechaFormateada;
 }
 
+/**
+ * Al pulsar el nombre del rival en el detalle de una jornada: pregunta si
+ * se quiere ir hasta allí y, si se confirma, abre Google Maps con la
+ * ubicación (el lugar si se conoce, o si no el propio nombre del rival) —
+ * cada móvil/ordenador abre luego con la app de mapas que tenga puesta por
+ * defecto.
+ */
+function abrirMapaDeJornada(jornada) {
+  if (!jornada) return;
+  var destino = (jornada.lugar || jornada.rival || '').trim();
+  if (!destino) return;
+
+  var confirmado = window.confirm('¿Quieres que te llevemos a "' + destino + '"?\n\nSe abrirá el mapa en una pestaña nueva.');
+  if (!confirmado) return;
+
+  window.open('https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(destino), '_blank');
+}
+
 function abrirDetalleJornada(jornada) {
   jornadaActual = jornada;
   mostrarVista('vista-jornada-detalle');
@@ -2674,6 +2692,9 @@ document.addEventListener('DOMContentLoaded', function () {
   });
   document.getElementById('boton-borrar-jornada').addEventListener('click', function () {
     borrarJornadaConConfirmacion(jornadaActual);
+  });
+  document.getElementById('jornada-detalle-rival').addEventListener('click', function () {
+    abrirMapaDeJornada(jornadaActual);
   });
   document.getElementById('boton-cancelar-jornada').addEventListener('click', cerrarModalJornada);
   document.getElementById('formulario-jornada').addEventListener('submit', manejarEnvioJornada);
