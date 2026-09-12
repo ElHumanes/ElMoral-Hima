@@ -1709,18 +1709,21 @@ function pintarTarjetaConvocatoriaPersonal(abierta) {
 
 function comprobarConvocatoriaAbiertaParaJugador() {
   var guardada = obtenerSesionGuardada();
-  llamarApi('obtenerResumenInicio', { token: guardada.token }).then(pintarResumenJugador);
+  llamarApi('obtenerResumenInicio', { token: guardada.token }).then(function (resultado) {
+    if (resultado.ok) pintarResumenJugador(resultado.resumen);
+  });
 }
 
 /**
- * Pinta la tarjeta de "Voy / No puedo" del jugador a partir de una respuesta
- * de obtenerResumenInicio ya obtenida — o bien pedida aquí (uso normal), o
- * bien la que ya venía incluida en la respuesta de login/validarSesion (así
- * se ahorra un segundo viaje de ida y vuelta al servidor justo al entrar).
+ * Pinta la tarjeta de "Voy / No puedo" del jugador a partir de un resumen ya
+ * obtenido (el objeto "resumen" en sí, no la respuesta completa de la API)
+ * — o bien pedido aquí (uso normal), o bien el que ya venía incluido en la
+ * respuesta de login/validarSesion (así se ahorra un segundo viaje de ida y
+ * vuelta al servidor justo al entrar).
  */
-function pintarResumenJugador(resultado) {
-  if (!resultado.ok) return;
-  pintarTarjetaConvocatoriaPersonal(resultado.resumen.convocatoria);
+function pintarResumenJugador(resumen) {
+  if (!resumen) return;
+  pintarTarjetaConvocatoriaPersonal(resumen.convocatoria);
 }
 
 function responderConvocatoria(idJornada, disponibilidad) {
@@ -1745,24 +1748,26 @@ function responderConvocatoria(idJornada, disponibilidad) {
 
 function comprobarConvocatoriaAbiertaParaCapitan() {
   var guardada = obtenerSesionGuardada();
-  llamarApi('obtenerResumenInicio', { token: guardada.token }).then(pintarResumenCapitan);
+  llamarApi('obtenerResumenInicio', { token: guardada.token }).then(function (resultado) {
+    if (resultado.ok) pintarResumenCapitan(resultado.resumen);
+  });
 }
 
 /**
- * Pinta el panel de convocatorias abiertas del capitán a partir de una
- * respuesta de obtenerResumenInicio ya obtenida — igual que
- * pintarResumenJugador, para poder reutilizar la que ya venga incluida en
- * login/validarSesion sin tener que volver a pedirla.
+ * Pinta el panel de convocatorias abiertas del capitán a partir de un
+ * resumen ya obtenido (el objeto "resumen" en sí, no la respuesta completa
+ * de la API) — igual que pintarResumenJugador, para poder reutilizar el que
+ * ya venga incluido en login/validarSesion sin tener que volver a pedirlo.
  */
-function pintarResumenCapitan(resultado) {
-  if (!resultado.ok) return;
+function pintarResumenCapitan(resumen) {
+  if (!resumen) return;
 
   var tarjeta = document.getElementById('tarjeta-convocatoria-capitan');
   var contenedor = document.getElementById('lista-convocatoria-capitan');
 
-  pintarTarjetaConvocatoriaPersonal(resultado.resumen.mi_convocatoria);
+  pintarTarjetaConvocatoriaPersonal(resumen.mi_convocatoria);
 
-  var convocatorias = resultado.resumen.convocatorias || [];
+  var convocatorias = resumen.convocatorias || [];
   if (convocatorias.length === 0) {
     tarjeta.classList.add('oculto');
     return;
