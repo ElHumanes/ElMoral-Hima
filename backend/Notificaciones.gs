@@ -46,10 +46,16 @@ function notifTextoJornada(jornada) {
 
 function notifFormatearFecha(fechaIso) {
   if (!fechaIso) return '';
-  var soloFecha = String(fechaIso).split('T')[0];
-  var partes = soloFecha.split('-');
+  var trozos = String(fechaIso).split('T');
+  var partes = trozos[0].split('-');
   if (partes.length !== 3) return fechaIso;
-  return partes[2] + '/' + partes[1] + '/' + partes[0];
+  var fechaFormateada = partes[2] + '/' + partes[1] + '/' + partes[0];
+
+  var hora = trozos[1];
+  if (hora && hora.substring(0, 5) !== '00:00') {
+    fechaFormateada += ' · ' + hora.substring(0, 5);
+  }
+  return fechaFormateada;
 }
 
 /**

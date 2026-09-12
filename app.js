@@ -742,10 +742,16 @@ function claseInsigniaEstado(estado) {
 
 function formatearFecha(fechaIso) {
   if (!fechaIso) return '';
-  var soloFecha = String(fechaIso).split('T')[0];
-  var partes = soloFecha.split('-');
+  var trozos = String(fechaIso).split('T');
+  var partes = trozos[0].split('-');
   if (partes.length !== 3) return fechaIso;
-  return partes[2] + '/' + partes[1] + '/' + partes[0];
+  var fechaFormateada = partes[2] + '/' + partes[1] + '/' + partes[0];
+
+  var hora = trozos[1];
+  if (hora && hora.substring(0, 5) !== '00:00') {
+    fechaFormateada += ' · ' + hora.substring(0, 5);
+  }
+  return fechaFormateada;
 }
 
 function abrirDetalleJornada(jornada) {
@@ -1049,7 +1055,10 @@ function abrirModalJornada(jornada) {
   if (jornada) {
     document.getElementById('modal-jornada-titulo').textContent = 'Editar jornada';
     document.getElementById('jornada-id').value = jornada.id_jornada;
-    document.getElementById('jornada-fecha').value = String(jornada.fecha).split('T')[0];
+    var partesFechaHora = String(jornada.fecha).split('T');
+    document.getElementById('jornada-fecha').value = partesFechaHora[0];
+    var horaGuardada = (partesFechaHora[1] || '').substring(0, 5);
+    document.getElementById('jornada-hora').value = horaGuardada === '00:00' ? '' : horaGuardada;
     document.getElementById('jornada-rival').value = jornada.rival;
     document.getElementById('jornada-local-visitante').value = jornada.local_visitante;
     document.getElementById('jornada-lugar').value = jornada.lugar || '';
@@ -1074,9 +1083,10 @@ function manejarEnvioJornada(evento) {
   var botonGuardar = document.getElementById('boton-guardar-jornada');
   var mensajeError = document.getElementById('mensaje-error-jornada');
 
+  var horaJornada = document.getElementById('jornada-hora').value || '00:00';
   var datos = {
     token: guardada.token,
-    fecha: document.getElementById('jornada-fecha').value,
+    fecha: document.getElementById('jornada-fecha').value + 'T' + horaJornada + ':00',
     rival: document.getElementById('jornada-rival').value.trim(),
     local_visitante: document.getElementById('jornada-local-visitante').value,
     lugar: document.getElementById('jornada-lugar').value.trim(),
