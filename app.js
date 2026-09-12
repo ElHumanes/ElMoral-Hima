@@ -2470,6 +2470,7 @@ function cargarClasificacion() {
     pintarClasificacionEquipo(resultado.clasificacion.equipo);
     pintarRankingJugadores(resultado.clasificacion.ranking_jugadores, 'clasificacion-ranking-jugadores');
     pintarRankingParejas(resultado.clasificacion.ranking_parejas, 'clasificacion-ranking-parejas');
+    pintarClasificacionGrupo(resultado.clasificacion.clasificacion_grupo);
   }
 
   llamarApiConCache('obtenerClasificacionCompleta', { token: guardada.token }, pintar)
@@ -2524,6 +2525,120 @@ function pintarClasificacionEquipo(clasificacion) {
     insignia.textContent = r.ganado ? 'Ganado' : 'Perdido';
     contenedor.appendChild(fila);
   });
+}
+
+/* ==========================================================================
+ * CLASIFICACIÓN DEL GRUPO (SNP) — tabla de los 6 equipos del grupo, con sus
+ * puntos. Se guarda a mano (no se puede calcular sola: depende también de
+ * los partidos de los demás equipos entre sí), así que el capitán la
+ * actualiza de vez en cuando copiándola de la web oficial.
+ * ======================================================================= */
+
+var clasificacionGrupoActual = [];
+
+function pintarClasificacionGrupo(equipos) {
+  clasificacionGrupoActual = equipos || [];
+  var contenedor = document.getElementById('tabla-clasificacion-grupo');
+  var botonEditar = document.getElementById('boton-editar-clasificacion-grupo');
+
+  botonEditar.classList.toggle('oculto', !(sesionActual && sesionActual.rol === 'CAPITAN'));
+
+  if (clasificacionGrupoActual.length === 0) {
+    contenedor.innerHTML = '<p class="texto-vacio">Todavía no se ha guardado la clasificación del grupo.</p>';
+    return;
+  }
+
+  var filas = clasificacionGrupoActual.map(function (e) {
+    var esNuestro = /moral/i.test(e.equipo);
+    return (
+      '<div class="jugador-tarjeta" style="padding:10px 12px;' + (esNuestro ? 'background:var(--color-bg);' : '') + '">' +
+        '<div class="jugador-info">' +
+          '<span class="jornada-rival" style="font-size:14px;">' + (esNuestro ? '⭐ ' : '') + '</span>' +
+        '</div>' +
+        '<span class="insignia insignia-posicion"></span>' +
+      '</div>'
+    );
+  }).join('');
+  contenedor.innerHTML = filas;
+
+  var tarjetas = contenedor.querySelectorAll('.jugador-tarjeta');
+  clasificacionGrupoActual.forEach(function (e, indice) {
+    var tarjeta = tarjetas[indice];
+    tarjeta.querySelector('.jornada-rival').textContent += e.posicion + '. ' + e.equipo;
+    tarjeta.querySelector('.insignia').textContent = e.puntos + ' pts';
+  });
+}
+
+function abrirModalClasificacionGrupo() {
+  var contenedor = document.getElementById('filas-clasificacion-grupo');
+  contenedor.innerHTML = '';
+
+  var base = clasificacionGrupoActual.length > 0
+    ? clasificacionGrupoActual
+    : [{ equipo: '', puntos: 0 }, { equipo: '', puntos: 0 }, { equipo: '', puntos: 0 }, { equipo: '', puntos: 0 }, { equipo: '', puntos: 0 }, { equipo: '', puntos: 0 }];
+
+  base.forEach(function (e) {
+    agregarFilaClasificacionGrupo(e.equipo, e.puntos);
+  });
+
+  document.getElementById('mensaje-error-clasificacion-grupo').classList.add('oculto');
+  document.getElementById('modal-clasificacion-grupo').classList.remove('oculto');
+}
+
+function agregarFilaClasificacionGrupo(equipo, puntos) {
+  var contenedor = document.getElementById('filas-clasificacion-grupo');
+  var fila = document.createElement('div');
+  fila.className = 'modal-botones';
+  fila.style.alignItems = 'center';
+  fila.innerHTML =
+    '<input class="entrada" type="text" placeholder="Nombre del equipo" style="flex:2;" value="">' +
+    '<input class="entrada" type="number" placeholder="Puntos" min="0" step="1" style="flex:1;" value="0">' +
+    '<button type="button" class="boton-mini boton-mini-peligro">✕</button>';
+  fila.querySelectorAll('.entrada')[0].value = equipo || '';
+  fila.querySelectorAll('.entrada')[1].value = Number(puntos) || 0;
+  fila.querySelector('button').addEventListener('click', function () {
+    fila.remove();
+  });
+  contenedor.appendChild(fila);
+}
+
+function cerrarModalClasificacionGrupo() {
+  document.getElementById('modal-clasificacion-grupo').classList.add('oculto');
+}
+
+function manejarGuardarClasificacionGrupo() {
+  var guardada = obtenerSesionGuardada();
+  var mensajeError = document.getElementById('mensaje-error-clasificacion-grupo');
+  mensajeError.classList.add('oculto');
+
+  var filas = Array.from(document.getElementById('filas-clasificacion-grupo').children);
+  var equipos = filas.map(function (fila) {
+    var entradas = fila.querySelectorAll('.entrada');
+    return { equipo: entradas[0].value.trim(), puntos: Number(entradas[1].value) || 0 };
+  }).filter(function (e) { return e.equipo; });
+
+  if (equipos.length === 0) {
+    mensajeError.textContent = 'Añade al menos un equipo.';
+    mensajeError.classList.remove('oculto');
+    return;
+  }
+
+  var boton = document.getElementById('boton-guardar-clasificacion-grupo');
+  boton.disabled = true;
+  llamarApi('guardarClasificacionGrupo', { token: guardada.token, equipos: equipos })
+    .then(function (resultado) {
+      if (!resultado.ok) {
+        mensajeError.textContent = resultado.error || 'No se ha podido guardar.';
+        mensajeError.classList.remove('oculto');
+        return;
+      }
+      limpiarCacheApi('obtenerClasificacionCompleta');
+      cerrarModalClasificacionGrupo();
+      cargarClasificacion();
+    })
+    .finally(function () {
+      boton.disabled = false;
+    });
 }
 
 /* ==========================================================================
@@ -2762,6 +2877,12 @@ document.addEventListener('DOMContentLoaded', function () {
   document.getElementById('boton-clasificacion-ranking').addEventListener('click', function () {
     cambiarModoClasificacion('RANKING');
   });
+  document.getElementById('boton-editar-clasificacion-grupo').addEventListener('click', abrirModalClasificacionGrupo);
+  document.getElementById('boton-anadir-equipo-clasificacion').addEventListener('click', function () {
+    agregarFilaClasificacionGrupo('', 0);
+  });
+  document.getElementById('boton-cancelar-clasificacion-grupo').addEventListener('click', cerrarModalClasificacionGrupo);
+  document.getElementById('boton-guardar-clasificacion-grupo').addEventListener('click', manejarGuardarClasificacionGrupo);
 
   document.getElementById('boton-ir-historial-convocatorias').addEventListener('click', irAVistaHistorialConvocatorias);
   document.getElementById('boton-ir-historial-convocatorias-capitan').addEventListener('click', irAVistaHistorialConvocatorias);

@@ -398,14 +398,85 @@ function obtenerClasificacionEquipo() {
 }
 
 /**
- * Junta en una sola llamada las 3 peticiones que hacía la pantalla de
- * Clasificación (equipo + ranking de jugadores + ranking de parejas).
+ * Clasificación del GRUPO de la SNP (los 6 equipos del grupo, con sus
+ * puntos), no solo del nuestro. A diferencia de obtenerClasificacionEquipo
+ * (que se calcula sola a partir de nuestros resultados), esta se guarda a
+ * mano en la pestaña CLASIFICACION_GRUPO y el capitán la actualiza de vez
+ * en cuando copiándola de la web oficial de la SNP — no tenemos forma de
+ * calcularla nosotros porque depende también de los partidos de los otros
+ * equipos entre sí, que no están en nuestra base de datos.
+ */
+function obtenerClasificacionGrupo() {
+  configurarHojaClasificacionGrupo();
+  return leerFilas('CLASIFICACION_GRUPO')
+    .map(function (f) {
+      return {
+        posicion: Number(f.posicion) || 0,
+        equipo: f.equipo,
+        puntos: Number(f.puntos) || 0
+      };
+    })
+    .sort(function (a, b) { return a.posicion - b.posicion; });
+}
+
+/** El capitán reemplaza la clasificación del grupo entera (la lista completa de equipos, en orden). */
+function guardarClasificacionGrupo(sesion, equipos) {
+  requerirCapitan(sesion);
+  if (!Array.isArray(equipos) || equipos.length === 0) {
+    throw new Error('Falta la lista de equipos.');
+  }
+  equipos.forEach(function (e) {
+    if (!e || !String(e.equipo || '').trim()) {
+      throw new Error('Todos los equipos necesitan un nombre.');
+    }
+  });
+  configurarHojaClasificacionGrupo();
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    vaciarHoja('CLASIFICACION_GRUPO');
+    var filas = equipos.map(function (e, indice) {
+      return {
+        posicion: indice + 1,
+        equipo: String(e.equipo).trim(),
+        puntos: Number(e.puntos) || 0
+      };
+    });
+    agregarFilas('CLASIFICACION_GRUPO', filas);
+    registrarLog(sesion.id_usuario, 'GUARDAR_CLASIFICACION_GRUPO', equipos.length + ' equipos');
+  } finally {
+    lock.releaseLock();
+  }
+
+  return { ok: true };
+}
+
+/**
+ * PASO ÚNICO A MANO (solo si hiciera falta ejecutarlo desde el editor):
+ * crea la pestaña CLASIFICACION_GRUPO con sus cabeceras si todavía no
+ * existe. No hace nada si ya está creada.
+ */
+function configurarHojaClasificacionGrupo() {
+  var ss = getSpreadsheet();
+  var hoja = ss.getSheetByName('CLASIFICACION_GRUPO');
+  if (!hoja) {
+    hoja = ss.insertSheet('CLASIFICACION_GRUPO');
+    hoja.getRange(1, 1, 1, 3).setValues([['posicion', 'equipo', 'puntos']]);
+  }
+}
+
+/**
+ * Junta en una sola llamada las peticiones que hacía la pantalla de
+ * Clasificación (equipo + ranking de jugadores + ranking de parejas +
+ * clasificación del grupo).
  */
 function obtenerClasificacionCompleta() {
   return {
     equipo: obtenerClasificacionEquipo(),
     ranking_jugadores: calcularRankingJugadores(),
-    ranking_parejas: calcularEstadisticasParejas()
+    ranking_parejas: calcularEstadisticasParejas(),
+    clasificacion_grupo: obtenerClasificacionGrupo()
   };
 }
 

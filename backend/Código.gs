@@ -167,6 +167,9 @@ function manejarPeticion(e) {
         if (!validarSesion(params.token)) return respuestaError('Sesión no válida o caducada.');
         return respuestaOk({ clasificacion: obtenerClasificacionCompleta() });
 
+      case 'guardarClasificacionGrupo':
+        return respuestaJson(guardarClasificacionGrupo(requerirSesionValida(params.token), params.equipos));
+
       case 'obtenerDashboard':
         return respuestaOk({ dashboard: obtenerDashboard(requerirSesionValida(params.token)) });
 

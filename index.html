@@ -475,9 +475,37 @@
       </div>
 
       <div id="panel-clasificacion-equipo">
+        <div class="cabecera-seccion" style="padding:0; margin-bottom:8px;">
+          <h3 class="titulo-seccion titulo-subseccion" style="margin:0;">🏆 Clasificación del grupo (SNP)</h3>
+          <button type="button" class="boton boton-secundario oculto" id="boton-editar-clasificacion-grupo" style="margin-left:auto;">✏️ Editar</button>
+        </div>
+        <div id="tabla-clasificacion-grupo" class="lista-jugadores"></div>
+
+        <h3 class="titulo-seccion titulo-subseccion">Nuestro balance</h3>
         <div id="resumen-clasificacion-equipo" class="tarjeta"></div>
         <h3 class="titulo-seccion titulo-subseccion">📅 Por jornada</h3>
         <div id="clasificacion-equipo-jornadas" class="lista-jugadores"></div>
+      </div>
+
+      <!-- MODAL: editar la clasificación del grupo (solo capitán) -->
+      <div id="modal-clasificacion-grupo" class="modal-fondo oculto">
+        <div class="modal-caja">
+          <h2 class="modal-titulo">Editar clasificación del grupo</h2>
+          <p class="texto-secundario">Copia el nombre y los puntos de cada equipo desde la web oficial de la SNP, en el mismo orden en que aparecen allí.</p>
+
+          <div id="filas-clasificacion-grupo"></div>
+
+          <div class="modal-botones">
+            <button type="button" class="boton boton-secundario" id="boton-anadir-equipo-clasificacion">+ Añadir equipo</button>
+          </div>
+
+          <p id="mensaje-error-clasificacion-grupo" class="mensaje-error oculto"></p>
+
+          <div class="modal-botones">
+            <button type="button" class="boton boton-secundario" id="boton-cancelar-clasificacion-grupo">Cancelar</button>
+            <button type="button" class="boton boton-primario" id="boton-guardar-clasificacion-grupo">Guardar</button>
+          </div>
+        </div>
       </div>
 
       <div id="panel-clasificacion-ranking" class="oculto">
@@ -651,6 +679,6 @@
     </div>
   </footer>
 
-  <script src="app.js?v=7"></script>
+  <script src="app.js?v=8"></script>
 </body>
 </html>
