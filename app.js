@@ -2100,6 +2100,7 @@ function cargarCalendario() {
             '<span class="insignia ' + claseInsigniaEstado(jornada.estado) + '"></span>' +
           '</div>';
         fila.querySelector('.jornada-rival').textContent =
+          (jornada.numero_jornada ? 'Jornada ' + jornada.numero_jornada + ' · ' : '') +
           (jornada.local_visitante === 'LOCAL' ? 'vs ' : '@ ') + jornada.rival;
         fila.querySelector('.jornada-meta').textContent =
           formatearFecha(jornada.fecha) + (jornada.lugar ? ' · ' + jornada.lugar : '');
@@ -2181,10 +2182,14 @@ function cargarHistorialConvocatorias() {
  * de cualquier jornada, no solo los partidos propios.
  * ======================================================================= */
 
+var jornadaLecturaActual = null;
+
 function irAVistaJornadaLectura(jornada) {
+  jornadaLecturaActual = jornada;
   mostrarVista('vista-jornada-lectura');
 
   document.getElementById('lectura-rival').textContent =
+    (jornada.numero_jornada ? 'Jornada ' + jornada.numero_jornada + ' · ' : '') +
     (jornada.local_visitante === 'LOCAL' ? 'vs ' : '@ ') + jornada.rival;
   document.getElementById('lectura-info').textContent =
     formatearFecha(jornada.fecha) + (jornada.lugar ? ' · ' + jornada.lugar : '') +
@@ -2695,6 +2700,9 @@ document.addEventListener('DOMContentLoaded', function () {
   });
   document.getElementById('jornada-detalle-rival').addEventListener('click', function () {
     abrirMapaDeJornada(jornadaActual);
+  });
+  document.getElementById('lectura-rival').addEventListener('click', function () {
+    abrirMapaDeJornada(jornadaLecturaActual);
   });
   document.getElementById('boton-cancelar-jornada').addEventListener('click', cerrarModalJornada);
   document.getElementById('formulario-jornada').addEventListener('submit', manejarEnvioJornada);
