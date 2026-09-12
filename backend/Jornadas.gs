@@ -20,6 +20,7 @@ function listarJornadas() {
     return {
       id_jornada: j.id_jornada,
       id_temporada: j.id_temporada,
+      numero_jornada: j.numero_jornada,
       fecha: j.fecha,
       rival: j.rival,
       local_visitante: j.local_visitante,
@@ -29,9 +30,9 @@ function listarJornadas() {
     };
   });
 
-  // Más recientes primero.
+  // Más próximas primero (la más lejana en el tiempo, al final).
   jornadas.sort(function (a, b) {
-    return String(b.fecha).localeCompare(String(a.fecha));
+    return String(a.fecha).localeCompare(String(b.fecha));
   });
 
   return jornadas;
@@ -45,11 +46,15 @@ function crearJornada(sesion, datos) {
   var localVisitante = (datos.local_visitante || '').trim();
   var lugar = (datos.lugar || '').trim();
   var observaciones = (datos.observaciones || '').trim();
+  var numeroJornada = Number(datos.numero_jornada);
 
   if (!fecha) throw new Error('La fecha es obligatoria.');
   if (!rival) throw new Error('El rival es obligatorio.');
   if (LOCAL_VISITANTE_VALIDOS.indexOf(localVisitante) === -1) {
     throw new Error('Indica si el partido es LOCAL o VISITANTE.');
+  }
+  if (!numeroJornada || numeroJornada < 1) {
+    throw new Error('Indica el número de jornada.');
   }
 
   var lock = LockService.getScriptLock();
@@ -60,6 +65,7 @@ function crearJornada(sesion, datos) {
     agregarFila('JORNADAS', {
       id_jornada: idJornada,
       id_temporada: obtenerOCrearTemporadaActual(),
+      numero_jornada: numeroJornada,
       fecha: fecha,
       rival: rival,
       local_visitante: localVisitante,
@@ -67,7 +73,7 @@ function crearJornada(sesion, datos) {
       estado: 'PENDIENTE',
       observaciones: observaciones
     });
-    registrarLog(sesion.id_usuario, 'CREAR_JORNADA', 'vs ' + rival + ' (' + fecha + ')');
+    registrarLog(sesion.id_usuario, 'CREAR_JORNADA', 'Jornada ' + numeroJornada + ' vs ' + rival + ' (' + fecha + ')');
   } finally {
     lock.releaseLock();
   }
@@ -91,11 +97,15 @@ function editarJornada(sesion, datos) {
   var localVisitante = (datos.local_visitante || '').trim();
   var lugar = (datos.lugar || '').trim();
   var observaciones = (datos.observaciones || '').trim();
+  var numeroJornada = Number(datos.numero_jornada);
 
   if (!fecha) throw new Error('La fecha es obligatoria.');
   if (!rival) throw new Error('El rival es obligatorio.');
   if (LOCAL_VISITANTE_VALIDOS.indexOf(localVisitante) === -1) {
     throw new Error('Indica si el partido es LOCAL o VISITANTE.');
+  }
+  if (!numeroJornada || numeroJornada < 1) {
+    throw new Error('Indica el número de jornada.');
   }
 
   var lock = LockService.getScriptLock();
@@ -103,6 +113,7 @@ function editarJornada(sesion, datos) {
   var actualizado;
   try {
     actualizado = actualizarFila('JORNADAS', 'id_jornada', idJornada, {
+      numero_jornada: numeroJornada,
       fecha: fecha,
       rival: rival,
       local_visitante: localVisitante,
@@ -110,7 +121,7 @@ function editarJornada(sesion, datos) {
       observaciones: observaciones
     });
     if (actualizado) {
-      registrarLog(sesion.id_usuario, 'EDITAR_JORNADA', 'vs ' + rival + ' (' + fecha + ')');
+      registrarLog(sesion.id_usuario, 'EDITAR_JORNADA', 'Jornada ' + numeroJornada + ' vs ' + rival + ' (' + fecha + ')');
     }
   } finally {
     lock.releaseLock();

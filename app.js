@@ -721,6 +721,7 @@ function crearTarjetaJornada(jornada) {
     '</div>';
 
   tarjeta.querySelector('.jornada-rival').textContent =
+    (jornada.numero_jornada ? 'Jornada ' + jornada.numero_jornada + ' · ' : '') +
     (jornada.local_visitante === 'LOCAL' ? 'vs ' : '@ ') + jornada.rival;
   tarjeta.querySelector('.jornada-meta').textContent =
     formatearFecha(jornada.fecha) + (jornada.lugar ? ' · ' + jornada.lugar : '');
@@ -759,6 +760,7 @@ function abrirDetalleJornada(jornada) {
   mostrarVista('vista-jornada-detalle');
 
   document.getElementById('jornada-detalle-rival').textContent =
+    (jornada.numero_jornada ? 'Jornada ' + jornada.numero_jornada + ' · ' : '') +
     (jornada.local_visitante === 'LOCAL' ? 'vs ' : '@ ') + jornada.rival;
   document.getElementById('jornada-detalle-info').textContent =
     formatearFecha(jornada.fecha) + (jornada.lugar ? ' · ' + jornada.lugar : '') +
@@ -1055,6 +1057,7 @@ function abrirModalJornada(jornada) {
   if (jornada) {
     document.getElementById('modal-jornada-titulo').textContent = 'Editar jornada';
     document.getElementById('jornada-id').value = jornada.id_jornada;
+    document.getElementById('jornada-numero').value = jornada.numero_jornada || '';
     var partesFechaHora = String(jornada.fecha).split('T');
     document.getElementById('jornada-fecha').value = partesFechaHora[0];
     var horaGuardada = (partesFechaHora[1] || '').substring(0, 5);
@@ -1086,6 +1089,7 @@ function manejarEnvioJornada(evento) {
   var horaJornada = document.getElementById('jornada-hora').value || '00:00';
   var datos = {
     token: guardada.token,
+    numero_jornada: document.getElementById('jornada-numero').value,
     fecha: document.getElementById('jornada-fecha').value + 'T' + horaJornada + ':00',
     rival: document.getElementById('jornada-rival').value.trim(),
     local_visitante: document.getElementById('jornada-local-visitante').value,
