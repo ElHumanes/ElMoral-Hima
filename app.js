@@ -398,8 +398,10 @@ function actualizarPuntuacionesSNP() {
   llamarApi('actualizarPuntuacionesSNP', { token: guardada.token })
     .then(function (resultado) {
       if (resultado.ok) {
-        var mensaje = resultado.actualizados.length + ' jugadores actualizados.';
-        if (resultado.sin_encontrar.length > 0) {
+        var mensaje = resultado.aviso
+          ? resultado.aviso
+          : resultado.actualizados.length + ' jugadores actualizados.';
+        if (!resultado.aviso && resultado.sin_encontrar.length > 0) {
           mensaje += '\n\nNo se han encontrado en el ranking de la SNP:\n' + resultado.sin_encontrar.join('\n');
         }
         alert(mensaje);

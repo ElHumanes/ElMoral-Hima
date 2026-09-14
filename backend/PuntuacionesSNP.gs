@@ -93,12 +93,32 @@ function actualizarPuntuacionesSNP() {
 
   // Se escriben todas las puntuaciones cambiadas de una sola vez al final,
   // en vez de una escritura suelta por jugador dentro del bucle de arriba.
-  actualizarFilasEnLote('JUGADORES', 'id_jugador', cambiosPorJugador);
+  // Si esta escritura fallara por lo que sea (algún dato suelto en la hoja
+  // que Google Sheets rechace, un fallo puntual del servicio...), no
+  // queremos que se pierda todo el trabajo de consultar la SNP ni que el
+  // capitán vea un error en inglés sin explicación: se avisa con claridad
+  // de que no se ha podido guardar, en vez de romper toda la acción.
+  var errorGuardado = null;
+  try {
+    actualizarFilasEnLote('JUGADORES', 'id_jugador', cambiosPorJugador);
+  } catch (err) {
+    errorGuardado = err.message;
+    Logger.log('Fallo al guardar las puntuaciones SNP: ' + err.message);
+  }
 
   var resumen = actualizados.length + ' actualizados, ' + sinEncontrar.length + ' sin encontrar en el ranking.';
   Logger.log('Actualizados: ' + (actualizados.join(' | ') || 'ninguno'));
   Logger.log('Sin encontrar: ' + (sinEncontrar.join(', ') || 'ninguno'));
-  registrarLog('', 'ACTUALIZAR_PUNTUACIONES_SNP', resumen);
+  registrarLog('', 'ACTUALIZAR_PUNTUACIONES_SNP', resumen + (errorGuardado ? ' (fallo al guardar: ' + errorGuardado + ')' : ''));
+
+  if (errorGuardado) {
+    return {
+      ok: true,
+      actualizados: [],
+      sin_encontrar: sinEncontrar,
+      aviso: 'Se han consultado los datos de la SNP correctamente, pero no se han podido guardar los cambios en la hoja. Vuelve a intentarlo en unos minutos; si se repite, avisa para revisarlo.'
+    };
+  }
 
   return { ok: true, actualizados: actualizados, sin_encontrar: sinEncontrar };
 }

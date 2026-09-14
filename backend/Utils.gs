@@ -212,18 +212,32 @@ function actualizarFilasEnLote(nombreHoja, columnaId, mapaCambios) {
   }
 
   var actualizadas = 0;
+  var columnasTocadas = {};
   for (var i = 1; i < datos.length; i++) {
     var cambios = mapaCambios[datos[i][colIndice]];
     if (!cambios) continue;
     for (var clave in cambios) {
       var colCambio = cabeceras.indexOf(clave);
-      if (colCambio !== -1) datos[i][colCambio] = cambios[clave];
+      if (colCambio !== -1) {
+        datos[i][colCambio] = cambios[clave];
+        columnasTocadas[colCambio] = true;
+      }
     }
     actualizadas++;
   }
 
   if (actualizadas > 0) {
-    hoja.getRange(1, 1, datos.length, cabeceras.length).setValues(datos);
+    // Se escribe cada columna afectada entera (todas las filas), pero solo
+    // esa columna — no la hoja entera con columnas que ni se han tocado.
+    // Así, si alguna otra columna tuviera algún dato suelto que Sheets
+    // rechazara al reescribirlo (por ejemplo, una validación de formato),
+    // esta escritura no se ve afectada por ello.
+    Object.keys(columnasTocadas).forEach(function (colStr) {
+      var col = Number(colStr);
+      var valoresColumna = [];
+      for (var f = 1; f < datos.length; f++) valoresColumna.push([datos[f][col]]);
+      hoja.getRange(2, col + 1, valoresColumna.length, 1).setValues(valoresColumna);
+    });
     invalidarCacheFilas(nombreHoja);
   }
   return actualizadas;
