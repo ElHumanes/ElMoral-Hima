@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Padel App</title>
+  <meta name="theme-color" content="#0090DF">
+  <meta name="description" content="Gestión del equipo de pádel del Club de Pádel El Moral: jugadores, jornadas, convocatorias y estadísticas.">
+  <meta property="og:title" content="Padel App">
+  <meta property="og:description" content="Gestión del equipo de pádel del Club de Pádel El Moral: jugadores, jornadas, convocatorias y estadísticas.">
+  <meta property="og:image" content="https://elhumanes.github.io/ElMoral-Hima/assets/icon-512.png">
+  <meta property="og:url" content="https://elhumanes.github.io/ElMoral-Hima/">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Padel App">
+  <meta name="twitter:description" content="Gestión del equipo de pádel del Club de Pádel El Moral: jugadores, jornadas, convocatorias y estadísticas.">
+  <meta name="twitter:image" content="https://elhumanes.github.io/ElMoral-Hima/assets/icon-512.png">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="assets/icon-192.png">
+  <link rel="apple-touch-icon" href="assets/icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Padel App">
+  <link rel="stylesheet" href="styles.css?v=5">
+  <script>
+    // Aplicar el tema guardado ANTES de pintar la página, para que no se
+    // vea un parpadeo del tema equivocado al cargar. Si no hay nada
+    // guardado, no se toca nada y manda la preferencia del sistema (la CSS
+    // ya sabe seguirla sola).
+    (function () {
+      try {
+        var tema = localStorage.getItem('padel_app_tema');
+        if (tema === 'light' || tema === 'dark') {
+          document.documentElement.setAttribute('data-theme', tema);
+        }
+      } catch (e) {}
+    })();
+  </script>
+</head>
+<body>
+
+  <header class="cabecera">
+    <div class="cabecera-contenido">
+      <div class="cabecera-izquierda">
+        <img src="assets/logo-club.png" alt="Club de Pádel El Moral" class="logo-club">
+        <span class="subtitulo-app">App de gestión de equipo</span>
+      </div>
+      <a class="cabecera-derecha" href="https://seriesnacionalesdepadel.com/" target="_blank" rel="noopener noreferrer" title="Series Nacionales de Pádel">
+        <img src="assets/logo-snp.png" alt="Series Nacionales de Pádel" class="logo-torneo">
+      </a>
+      <button type="button" class="boton-tema" id="boton-tema" title="Cambiar a modo oscuro" aria-label="Cambiar entre modo claro y oscuro">🌙</button>
+    </div>
+  </header>
+
+  <main class="contenedor">
+
+    <!-- VISTA: CARGANDO -->
+    <section id="vista-cargando" class="vista">
+      <div class="cargando">
+        <div class="spinner"></div>
+        <p>Cargando...</p>
+      </div>
+    </section>
+
+    <!-- VISTA: LOGIN -->
+    <section id="vista-login" class="vista oculto">
+      <div class="tarjeta tarjeta-login">
+        <h1 class="titulo-login">Bienvenido</h1>
+        <p class="subtitulo-login">Entra con tu usuario y tu código de acceso.</p>
+
+        <form id="formulario-login">
+          <label class="etiqueta" for="campo-usuario">Usuario</label>
+          <input class="entrada" type="text" id="campo-usuario" autocomplete="username" required>
+
+          <label class="etiqueta" for="campo-codigo">Código de acceso</label>
+          <input class="entrada" type="password" id="campo-codigo" autocomplete="current-password" required>
+
+          <p id="mensaje-error-login" class="mensaje-error oculto"></p>
+
+          <button type="submit" class="boton boton-primario" id="boton-login">
+            Entrar
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <!-- VISTA: INICIO (tras login) -->
+    <section id="vista-inicio" class="vista oculto">
+      <div class="tarjeta">
+        <p class="etiqueta-rol" id="etiqueta-rol"></p>
+        <h1 class="titulo-bienvenida">Hola, <span id="texto-nombre-usuario"></span> 👋</h1>
+        <p class="texto-secundario">
+          Has iniciado sesión correctamente. Las siguientes fases irán añadiendo aquí
+          las jornadas, convocatorias y estadísticas.
+        </p>
+      </div>
+
+      <div id="menu-capitan" class="menu-tarjetas oculto">
+        <button class="tarjeta-menu" id="boton-ir-perfil-capitan">
+          <span class="tarjeta-menu-icono">🙋</span>
+          <span class="tarjeta-menu-texto">Mi perfil</span>
+        </button>
+        <button class="tarjeta-menu" id="boton-ir-jugadores">
+          <span class="tarjeta-menu-icono">👥</span>
+          <span class="tarjeta-menu-texto">Jugadores</span>
+        </button>
+        <button class="tarjeta-menu" id="boton-ir-jornadas">
+          <span class="tarjeta-menu-icono">📅</span>
+          <span class="tarjeta-menu-texto">Jornadas</span>
+        </button>
+        <button class="tarjeta-menu" id="boton-ir-calendario-capitan">
+          <span class="tarjeta-menu-icono">📅</span>
+          <span class="tarjeta-menu-texto">Calendario</span>
+        </button>
+        <button class="tarjeta-menu" id="boton-ir-resultados-capitan">
+          <span class="tarjeta-menu-icono">
+            <svg width="1.3em" height="1.3em" viewBox="0 0 24 24" style="vertical-align:-0.3em" aria-hidden="true">
+              <circle cx="12" cy="12" r="11" fill="#c6e21e" stroke="#9fb800" stroke-width="0.6"/>
+              <path d="M2 7 Q12 4 12 12 Q12 20 2 17" fill="none" stroke="#fff" stroke-width="1.4"/>
+              <path d="M22 7 Q12 4 12 12 Q12 20 22 17" fill="none" stroke="#fff" stroke-width="1.4"/>
+            </svg>
+          </span>
+          <span class="tarjeta-menu-texto">Resultados</span>
+        </button>
+        <button class="tarjeta-menu" id="boton-ir-dashboard">
+          <span class="tarjeta-menu-icono">📊</span>
+          <span class="tarjeta-menu-texto">Estadísticas</span>
+        </button>
+        <button class="tarjeta-menu" id="boton-ir-clasificacion-capitan">
+          <span class="tarjeta-menu-icono">🏆</span>
+          <span class="tarjeta-menu-texto">Clasificación</span>
+        </button>
+        <button class="tarjeta-menu" id="boton-ir-historial-convocatorias-capitan">
+          <span class="tarjeta-menu-icono">📋</span>
+          <span class="tarjeta-menu-texto">Convocatorias</span>
+        </button>
+      </div>
+
+      <div id="tarjeta-convocatoria-capitan" class="oculto">
+        <h3 class="titulo-seccion titulo-subseccion" style="margin-top:0">📋 Convocatorias abiertas</h3>
+        <div id="lista-convocatoria-capitan" class="lista-jugadores"></div>
+      </div>
+
+      <div id="menu-jugador" class="menu-tarjetas oculto">
+        <button class="tarjeta-menu" id="boton-ir-perfil">
+          <span class="tarjeta-menu-icono">🙋</span>
+          <span class="tarjeta-menu-texto">Mi perfil</span>
+        </button>
+        <button class="tarjeta-menu" id="boton-ir-calendario">
+          <span class="tarjeta-menu-icono">📅</span>
+          <span class="tarjeta-menu-texto">Calendario</span>
+        </button>
+        <button class="tarjeta-menu" id="boton-ir-resultados">
+          <span class="tarjeta-menu-icono">
+            <svg width="1.3em" height="1.3em" viewBox="0 0 24 24" style="vertical-align:-0.3em" aria-hidden="true">
+              <circle cx="12" cy="12" r="11" fill="#c6e21e" stroke="#9fb800" stroke-width="0.6"/>
+              <path d="M2 7 Q12 4 12 12 Q12 20 2 17" fill="none" stroke="#fff" stroke-width="1.4"/>
+              <path d="M22 7 Q12 4 12 12 Q12 20 22 17" fill="none" stroke="#fff" stroke-width="1.4"/>
+            </svg>
+          </span>
+          <span class="tarjeta-menu-texto">Resultados</span>
+        </button>
+        <button class="tarjeta-menu" id="boton-ir-estadisticas-jugador">
+          <span class="tarjeta-menu-icono">📊</span>
+          <span class="tarjeta-menu-texto">Estadísticas</span>
+        </button>
+        <button class="tarjeta-menu" id="boton-ir-clasificacion">
+          <span class="tarjeta-menu-icono">🏆</span>
+          <span class="tarjeta-menu-texto">Clasificación</span>
+        </button>
+        <button class="tarjeta-menu" id="boton-ir-historial-convocatorias">
+          <span class="tarjeta-menu-icono">📋</span>
+          <span class="tarjeta-menu-texto">Convocatorias</span>
+        </button>
+        <button class="tarjeta-menu" id="boton-ir-companeros">
+          <span class="tarjeta-menu-icono">👥</span>
+          <span class="tarjeta-menu-texto">Compañeros</span>
+        </button>
+      </div>
+
+      <div id="tarjeta-convocatoria-jugador" class="tarjeta oculto">
+        <p class="etiqueta-rol">Convocatoria abierta</p>
+        <h2 id="convocatoria-jugador-titulo" class="titulo-seccion"></h2>
+        <p id="convocatoria-jugador-info" class="texto-secundario"></p>
+        <p id="convocatoria-jugador-respuesta-actual" class="texto-secundario oculto"></p>
+        <div class="modal-botones">
+          <button type="button" class="boton boton-danger" id="boton-no-puedo">No puedo</button>
+          <button type="button" class="boton boton-exito" id="boton-me-apunto">Me apunto</button>
+        </div>
+      </div>
+
+      <button class="boton boton-secundario" id="boton-logout">Cerrar sesión</button>
+    </section>
+
+    <!-- VISTA: JUGADORES (gestión, solo capitán) -->
+    <section id="vista-jugadores" class="vista oculto">
+      <div class="cabecera-seccion">
+        <button class="boton-volver" id="boton-volver-jugadores">← Volver</button>
+        <h1 class="titulo-seccion">Jugadores</h1>
+      </div>
+
+      <button class="boton boton-primario" id="boton-nuevo-jugador">+ Nuevo jugador</button>
+      <button class="boton boton-secundario" id="boton-actualizar-puntuaciones-snp">🔄 Actualizar puntuaciones desde la SNP</button>
+
+      <p id="mensaje-jugadores" class="mensaje-error oculto"></p>
+
+      <div id="lista-jugadores" class="lista-jugadores"></div>
+    </section>
+
+
+    <!-- VISTA: DASHBOARD / ESTADÍSTICAS (solo capitán) -->
+    <section id="vista-dashboard" class="vista oculto">
+      <div class="cabecera-seccion">
+        <button class="boton-volver" id="boton-volver-dashboard">← Volver</button>
+        <h1 class="titulo-seccion">Estadísticas</h1>
+      </div>
+
+      <div id="resumen-dashboard" class="tarjeta"></div>
+
+      <h3 class="titulo-seccion titulo-subseccion">🏅 Ranking de jugadores</h3>
+      <div id="lista-ranking-jugadores" class="lista-jugadores"></div>
+
+      <h3 class="titulo-seccion titulo-subseccion">🤝 Ranking de parejas</h3>
+      <div id="lista-ranking-parejas" class="lista-jugadores"></div>
+    </section>
+
+    <!-- VISTA: JORNADAS (gestión, solo capitán) -->
+    <section id="vista-jornadas" class="vista oculto">
+      <div class="cabecera-seccion">
+        <button class="boton-volver" id="boton-volver-jornadas">← Volver</button>
+        <h1 class="titulo-seccion">Jornadas</h1>
+      </div>
+
+      <button class="boton boton-primario" id="boton-nueva-jornada">+ Nueva jornada</button>
+
+      <label class="etiqueta" for="filtro-jornadas">Mostrar</label>
+      <select class="entrada" id="filtro-jornadas">
+        <option value="TODAS">Todas</option>
+        <option value="PENDIENTE">Pendientes</option>
+        <option value="CONVOCATORIA_ABIERTA">Convocatoria abierta</option>
+        <option value="CONVOCATORIA_CERRADA">Convocatoria cerrada</option>
+        <option value="CONFIRMADA">Confirmada (10 elegidos)</option>
+        <option value="JUGADA">Jugada (resultados en curso)</option>
+        <option value="FINALIZADA">Finalizada</option>
+      </select>
+
+      <p id="mensaje-jornadas" class="mensaje-error oculto"></p>
+
+      <div id="lista-jornadas" class="lista-jugadores"></div>
+    </section>
+
+    <!-- VISTA: DETALLE DE JORNADA (gestión, solo capitán) -->
+    <section id="vista-jornada-detalle" class="vista oculto">
+      <div class="cabecera-seccion">
+        <button class="boton-volver" id="boton-volver-jornada-detalle">← Volver</button>
+        <h1 class="titulo-seccion">Jornada</h1>
+      </div>
+
+      <div class="tarjeta">
+        <span id="jornada-detalle-estado" class="insignia insignia-posicion"></span>
+        <h2 id="jornada-detalle-rival" class="titulo-bienvenida jornada-detalle-rival-clicable" title="Ver ubicación en el mapa"></h2>
+        <p id="jornada-detalle-info" class="texto-secundario"></p>
+        <p id="jornada-detalle-observaciones" class="texto-secundario"></p>
+
+        <div id="jornada-detalle-acciones" class="modal-botones"></div>
+        <div class="modal-botones">
+          <button type="button" class="boton boton-secundario" id="boton-editar-jornada">✏️ Editar</button>
+          <button type="button" class="boton boton-secundario boton-mini-peligro" id="boton-borrar-jornada">🗑️ Borrar jornada</button>
+        </div>
+      </div>
+
+      <div id="bloque-convocatoria" class="oculto">
+        <h3 class="titulo-seccion titulo-subseccion">✅ Apuntados (<span id="contador-apuntados">0</span>)</h3>
+        <div id="lista-apuntados" class="lista-jugadores"></div>
+
+        <h3 class="titulo-seccion titulo-subseccion">❌ No disponibles (<span id="contador-no-disponibles">0</span>)</h3>
+        <div id="lista-no-disponibles" class="lista-jugadores"></div>
+
+        <h3 class="titulo-seccion titulo-subseccion">⏳ Pendientes (<span id="contador-pendientes">0</span>)</h3>
+        <div id="lista-pendientes" class="lista-jugadores"></div>
+      </div>
+
+      <div id="bloque-seleccionados" class="oculto">
+        <h3 class="titulo-seccion titulo-subseccion">🏆 Los 10 seleccionados</h3>
+        <div id="lista-seleccionados" class="lista-jugadores"></div>
+      </div>
+
+      <div id="bloque-parejas" class="oculto">
+        <h3 class="titulo-seccion titulo-subseccion">🎾 Parejas</h3>
+        <div id="lista-parejas" class="lista-jugadores"></div>
+
+        <h3 class="titulo-seccion titulo-subseccion">📊 Resultados</h3>
+        <div id="lista-partidos" class="lista-jugadores"></div>
+      </div>
+    </section>
+
+    <!-- VISTA: ELEGIR LAS 5 PAREJAS (gestión, solo capitán) — fusiona selección de los 10 y formación de parejas -->
+    <section id="vista-parejas" class="vista oculto">
+      <div class="cabecera-seccion">
+        <button class="boton-volver" id="boton-volver-parejas">← Volver</button>
+        <h1 class="titulo-seccion" id="titulo-vista-parejas">Elegir las 5 parejas</h1>
+      </div>
+
+      <p class="texto-secundario" id="descripcion-vista-parejas">Toca dos jugadores para formar una pareja. Se ordenarán solas por puntuación al guardar.</p>
+      <p class="etiqueta-rol" id="contador-parejas-formadas">0 / 5 parejas formadas</p>
+
+      <p id="mensaje-parejas" class="mensaje-error oculto"></p>
+
+      <div id="sugerencia-alineacion" class="tarjeta oculto"></div>
+
+      <h3 class="titulo-seccion titulo-subseccion">Parejas formadas</h3>
+      <div id="lista-parejas-formadas" class="lista-jugadores"></div>
+
+      <h3 class="titulo-seccion titulo-subseccion">Jugadores disponibles</h3>
+      <div id="lista-disponibles-parejas" class="lista-jugadores"></div>
+
+      <div id="vista-previa-pareja" class="tarjeta oculto"></div>
+
+      <button class="boton boton-primario" id="boton-guardar-parejas" disabled>Guardar parejas</button>
+    </section>
+
+    <!-- VISTA: RECOMENDACIONES (gestión, solo capitán) -->
+    <section id="vista-recomendaciones" class="vista oculto">
+      <div class="cabecera-seccion">
+        <button class="boton-volver" id="boton-volver-recomendaciones">← Volver</button>
+        <h1 class="titulo-seccion">Recomendaciones</h1>
+      </div>
+
+      <p class="texto-secundario">
+        El motor analiza compatibilidad, puntuación, historial juntos, forma reciente y
+        equilibrio de la alineación, y propone las 3 mejores combinaciones.
+      </p>
+
+      <p id="mensaje-recomendaciones" class="mensaje-error oculto"></p>
+
+      <div id="lista-recomendaciones"></div>
+    </section>
+
+    <!-- VISTA: MI PERFIL (jugador) -->
+    <section id="vista-perfil" class="vista oculto">
+      <div class="cabecera-seccion">
+        <button class="boton-volver" id="boton-volver-perfil">← Volver</button>
+        <h1 class="titulo-seccion">Mi perfil</h1>
+      </div>
+
+      <div class="tarjeta tarjeta-perfil-foto">
+        <div id="perfil-avatar-contenedor"></div>
+        <label class="boton boton-secundario boton-foto" for="perfil-foto-input">📷 Cambiar foto</label>
+        <input type="file" id="perfil-foto-input" accept="image/*" class="oculto">
+        <p id="mensaje-perfil-foto" class="mensaje-error oculto"></p>
+      </div>
+
+      <div id="tarjeta-perfil" class="tarjeta"></div>
+      <button type="button" class="boton boton-secundario" id="boton-editar-perfil">✏️ Editar mis datos</button>
+
+      <div id="tarjeta-perfil-editar" class="tarjeta oculto">
+        <h3 class="titulo-seccion titulo-subseccion" style="margin-top:0">Editar mis datos</h3>
+        <form id="formulario-perfil-editar">
+          <label class="etiqueta" for="perfil-nombre">Nombre</label>
+          <input class="entrada" type="text" id="perfil-nombre" required>
+
+          <label class="etiqueta" for="perfil-apellidos">Apellidos</label>
+          <input class="entrada" type="text" id="perfil-apellidos" required>
+
+          <label class="etiqueta" for="perfil-apodo">Apodo (opcional)</label>
+          <input class="entrada" type="text" id="perfil-apodo" placeholder="Como te conoce el equipo">
+
+          <label class="etiqueta" for="perfil-email">Email (para recibir avisos de convocatoria)</label>
+          <input class="entrada" type="email" id="perfil-email" placeholder="nombre@ejemplo.com">
+
+          <label class="etiqueta" for="perfil-telefono">Teléfono (opcional)</label>
+          <input class="entrada" type="tel" id="perfil-telefono" placeholder="600 000 000">
+
+          <label class="etiqueta" for="perfil-posicion-principal">Posición principal</label>
+          <select class="entrada" id="perfil-posicion-principal" required>
+            <option value="">Selecciona una posición</option>
+            <option value="DERECHA">Derecha</option>
+            <option value="REVÉS">Revés</option>
+          </select>
+
+          <label class="fila-checkbox" for="perfil-posicion-secundaria-check">
+            <input type="checkbox" id="perfil-posicion-secundaria-check">
+            <span id="perfil-posicion-secundaria-texto">También juego en el otro lado</span>
+          </label>
+
+          <label class="etiqueta" for="perfil-codigo-nuevo">Cambiar mi contraseña (opcional)</label>
+          <input class="entrada" type="password" id="perfil-codigo-nuevo" placeholder="Déjalo en blanco para no cambiarla" autocomplete="new-password">
+
+          <p id="mensaje-error-perfil-editar" class="mensaje-error oculto"></p>
+
+          <div class="modal-botones">
+            <button type="button" class="boton boton-secundario" id="boton-cancelar-editar-perfil">Cancelar</button>
+            <button type="submit" class="boton boton-primario" id="boton-guardar-perfil">Guardar</button>
+          </div>
+        </form>
+      </div>
+
+      <div id="tarjeta-perfil-estadisticas" class="tarjeta oculto"></div>
+    </section>
+
+    <!-- VISTA: CALENDARIO (jugador) -->
+    <section id="vista-calendario" class="vista oculto">
+      <div class="cabecera-seccion">
+        <button class="boton-volver" id="boton-volver-calendario">← Volver</button>
+        <h1 class="titulo-seccion">Calendario</h1>
+      </div>
+
+      <div id="lista-calendario" class="lista-jugadores"></div>
+    </section>
+
+    <!-- VISTA: DETALLE DE JORNADA — SOLO LECTURA (jugador) -->
+    <section id="vista-jornada-lectura" class="vista oculto">
+      <div class="cabecera-seccion">
+        <button class="boton-volver" id="boton-volver-jornada-lectura">← Volver</button>
+        <h1 class="titulo-seccion">Jornada</h1>
+      </div>
+
+      <div class="tarjeta">
+        <span id="lectura-estado" class="insignia insignia-posicion"></span>
+        <h2 id="lectura-rival" class="titulo-bienvenida jornada-detalle-rival-clicable" title="Ver ubicación en el mapa"></h2>
+        <p id="lectura-info" class="texto-secundario"></p>
+      </div>
+
+      <div id="lectura-bloque-parejas" class="oculto">
+        <h3 class="titulo-seccion titulo-subseccion">🎾 Parejas y resultados</h3>
+        <div id="lectura-lista-partidos" class="lista-jugadores"></div>
+      </div>
+    </section>
+
+    <!-- VISTA: RESULTADOS (jugador) — todos los partidos jugados, sin tener que entrar jornada por jornada -->
+    <section id="vista-resultados" class="vista oculto">
+      <div class="cabecera-seccion">
+        <button class="boton-volver" id="boton-volver-resultados">← Volver</button>
+        <h1 class="titulo-seccion">Resultados</h1>
+      </div>
+
+      <div class="modal-botones">
+        <button type="button" class="boton boton-primario" id="boton-resultados-equipo">Equipo</button>
+        <button type="button" class="boton boton-secundario" id="boton-resultados-mios">Mis partidos</button>
+      </div>
+
+      <div id="lista-resultados" class="lista-jugadores"></div>
+    </section>
+
+    <!-- VISTA: ESTADÍSTICAS (jugador) — las mismas que en "Mi perfil", como apartado propio -->
+    <section id="vista-estadisticas-jugador" class="vista oculto">
+      <div class="cabecera-seccion">
+        <button class="boton-volver" id="boton-volver-estadisticas-jugador">← Volver</button>
+        <h1 class="titulo-seccion">Estadísticas</h1>
+      </div>
+
+      <div id="tarjeta-estadisticas-jugador" class="tarjeta"></div>
+    </section>
+
+    <!-- VISTA: COMPAÑEROS (jugador) — vista básica de todo el equipo: foto, apodo, posición y puntos -->
+    <section id="vista-companeros" class="vista oculto">
+      <div class="cabecera-seccion">
+        <button class="boton-volver" id="boton-volver-companeros">← Volver</button>
+        <h1 class="titulo-seccion">Compañeros</h1>
+      </div>
+
+      <div id="lista-companeros" class="lista-jugadores"></div>
+    </section>
+
+    <!-- VISTA: CLASIFICACIÓN (jugador) — clasificación del equipo en la liga (SNP) y ranking interno -->
+    <section id="vista-clasificacion" class="vista oculto">
+      <div class="cabecera-seccion">
+        <button class="boton-volver" id="boton-volver-clasificacion">← Volver</button>
+        <h1 class="titulo-seccion">Clasificación</h1>
+      </div>
+
+      <div class="modal-botones">
+        <button type="button" class="boton boton-primario" id="boton-clasificacion-equipo">Clasificación del Equipo</button>
+        <button type="button" class="boton boton-secundario" id="boton-clasificacion-ranking">Ranking</button>
+      </div>
+
+      <div id="panel-clasificacion-equipo">
+        <div class="cabecera-seccion" style="padding:0; margin-bottom:8px;">
+          <h3 class="titulo-seccion titulo-subseccion" style="margin:0;">🏆 Clasificación del grupo (SNP)</h3>
+          <button type="button" class="boton boton-secundario oculto" id="boton-editar-clasificacion-grupo" style="margin-left:auto;">✏️ Editar</button>
+        </div>
+        <div id="tabla-clasificacion-grupo" class="lista-jugadores"></div>
+
+        <h3 class="titulo-seccion titulo-subseccion">Nuestro balance</h3>
+        <div id="resumen-clasificacion-equipo" class="tarjeta"></div>
+        <h3 class="titulo-seccion titulo-subseccion">📅 Por jornada</h3>
+        <div id="clasificacion-equipo-jornadas" class="lista-jugadores"></div>
+      </div>
+
+      <!-- MODAL: editar la clasificación del grupo (solo capitán) -->
+      <div id="modal-clasificacion-grupo" class="modal-fondo oculto">
+        <div class="modal-caja">
+          <h2 class="modal-titulo">Editar clasificación del grupo</h2>
+          <p class="texto-secundario">Copia el nombre y los puntos de cada equipo desde la web oficial de la SNP, en el mismo orden en que aparecen allí.</p>
+
+          <div id="filas-clasificacion-grupo"></div>
+
+          <div class="modal-botones">
+            <button type="button" class="boton boton-secundario" id="boton-anadir-equipo-clasificacion">+ Añadir equipo</button>
+          </div>
+
+          <p id="mensaje-error-clasificacion-grupo" class="mensaje-error oculto"></p>
+
+          <div class="modal-botones">
+            <button type="button" class="boton boton-secundario" id="boton-cancelar-clasificacion-grupo">Cancelar</button>
+            <button type="button" class="boton boton-primario" id="boton-guardar-clasificacion-grupo">Guardar</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="panel-clasificacion-ranking" class="oculto">
+        <h3 class="titulo-seccion titulo-subseccion" style="margin-top:0">🏅 Ranking de jugadores</h3>
+        <div id="clasificacion-ranking-jugadores" class="lista-jugadores"></div>
+
+        <h3 class="titulo-seccion titulo-subseccion">🤝 Ranking de parejas</h3>
+        <div id="clasificacion-ranking-parejas" class="lista-jugadores"></div>
+      </div>
+    </section>
+
+    <!-- VISTA: HISTORIAL DE CONVOCATORIAS (jugador) -->
+    <section id="vista-historial-convocatorias" class="vista oculto">
+      <div class="cabecera-seccion">
+        <button class="boton-volver" id="boton-volver-historial-convocatorias">← Volver</button>
+        <h1 class="titulo-seccion">Historial de convocatorias</h1>
+      </div>
+
+      <p class="texto-secundario">Convocatorias ya cerradas y si te apuntaste a cada una.</p>
+
+      <div id="lista-historial-convocatorias" class="lista-jugadores"></div>
+    </section>
+
+  </main>
+
+  <!-- MODAL: crear / editar jugador -->
+  <div id="modal-jugador" class="modal-fondo oculto">
+    <div class="modal-caja">
+      <h2 id="modal-jugador-titulo" class="modal-titulo">Nuevo jugador</h2>
+
+      <form id="formulario-jugador">
+        <input type="hidden" id="jugador-id">
+
+        <label class="etiqueta" for="jugador-nombre">Nombre</label>
+        <input class="entrada" type="text" id="jugador-nombre" required>
+
+        <label class="etiqueta" for="jugador-apellidos">Apellidos</label>
+        <input class="entrada" type="text" id="jugador-apellidos" required>
+
+        <label class="etiqueta" for="jugador-apodo">Apodo (opcional)</label>
+        <input class="entrada" type="text" id="jugador-apodo" placeholder="Como le conoce el equipo">
+
+        <label class="etiqueta" for="jugador-email">Email (opcional, para avisos de convocatoria)</label>
+        <input class="entrada" type="email" id="jugador-email" placeholder="nombre@ejemplo.com">
+
+        <label class="etiqueta" for="jugador-telefono">Teléfono (opcional)</label>
+        <input class="entrada" type="tel" id="jugador-telefono" placeholder="600 000 000">
+
+        <label class="etiqueta" for="jugador-posicion-principal">Posición principal</label>
+        <select class="entrada" id="jugador-posicion-principal" required>
+          <option value="">Selecciona una posición</option>
+          <option value="DERECHA">Derecha</option>
+          <option value="REVÉS">Revés</option>
+        </select>
+
+        <label class="fila-checkbox" for="jugador-posicion-secundaria-check">
+          <input type="checkbox" id="jugador-posicion-secundaria-check">
+          <span id="jugador-posicion-secundaria-texto">También juega en el otro lado</span>
+        </label>
+
+        <label class="etiqueta" for="jugador-puntuacion">Puntuación</label>
+        <input class="entrada" type="number" id="jugador-puntuacion" min="0" step="0.01" value="0" required>
+
+        <label class="fila-checkbox" for="jugador-no-convocable">
+          <input type="checkbox" id="jugador-no-convocable">
+          <span>No convocable (es del equipo, pero no se le convoca a las jornadas)</span>
+        </label>
+
+        <p id="mensaje-error-jugador" class="mensaje-error oculto"></p>
+
+        <div class="modal-botones">
+          <button type="button" class="boton boton-secundario" id="boton-cancelar-jugador">Cancelar</button>
+          <button type="submit" class="boton boton-primario" id="boton-guardar-jugador">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: nueva jornada -->
+  <div id="modal-jornada" class="modal-fondo oculto">
+    <div class="modal-caja">
+      <h2 class="modal-titulo" id="modal-jornada-titulo">Nueva jornada</h2>
+
+      <form id="formulario-jornada">
+        <input type="hidden" id="jornada-id">
+        <label class="etiqueta" for="jornada-numero">Jornada (número)</label>
+        <input class="entrada" type="number" id="jornada-numero" min="1" step="1" required>
+
+        <label class="etiqueta" for="jornada-fecha">Fecha</label>
+        <input class="entrada" type="date" id="jornada-fecha" required>
+
+        <label class="etiqueta" for="jornada-hora">Hora de la convocatoria (opcional)</label>
+        <input class="entrada" type="time" id="jornada-hora">
+
+        <label class="etiqueta" for="jornada-rival">Rival</label>
+        <input class="entrada" type="text" id="jornada-rival" required>
+
+        <label class="etiqueta" for="jornada-local-visitante">Local / Visitante</label>
+        <select class="entrada" id="jornada-local-visitante" required>
+          <option value="">Selecciona</option>
+          <option value="LOCAL">Local</option>
+          <option value="VISITANTE">Visitante</option>
+        </select>
+
+        <label class="etiqueta" for="jornada-lugar">Lugar (opcional)</label>
+        <input class="entrada" type="text" id="jornada-lugar">
+
+        <label class="etiqueta" for="jornada-observaciones">Observaciones (opcional)</label>
+        <input class="entrada" type="text" id="jornada-observaciones">
+
+        <p id="mensaje-error-jornada" class="mensaje-error oculto"></p>
+
+        <div class="modal-botones">
+          <button type="button" class="boton boton-secundario" id="boton-cancelar-jornada">Cancelar</button>
+          <button type="submit" class="boton boton-primario" id="boton-guardar-jornada">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: crear / editar usuario -->
+  <!-- MODAL: registrar resultado de un partido -->
+  <div id="modal-resultado" class="modal-fondo oculto">
+    <div class="modal-caja">
+      <h2 id="modal-resultado-titulo" class="modal-titulo">Resultado del partido</h2>
+
+      <form id="formulario-resultado">
+        <input type="hidden" id="resultado-id-partido">
+
+        <label class="etiqueta">Sets</label>
+        <div class="fila-marcador">
+          <input class="entrada" type="number" id="resultado-sets-favor" min="0" max="3" placeholder="Nosotros" required>
+          <span class="separador-marcador">–</span>
+          <input class="entrada" type="number" id="resultado-sets-contra" min="0" max="3" placeholder="Rival" required>
+        </div>
+
+        <label class="etiqueta">Juegos totales (opcional, para desempatar estadísticas)</label>
+        <div class="fila-marcador">
+          <input class="entrada" type="number" id="resultado-juegos-favor" min="0" placeholder="Nosotros" value="0">
+          <span class="separador-marcador">–</span>
+          <input class="entrada" type="number" id="resultado-juegos-contra" min="0" placeholder="Rival" value="0">
+        </div>
+
+        <p id="mensaje-error-resultado" class="mensaje-error oculto"></p>
+
+        <div class="modal-botones">
+          <button type="button" class="boton boton-secundario" id="boton-cancelar-resultado">Cancelar</button>
+          <button type="submit" class="boton boton-primario" id="boton-guardar-resultado">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <footer class="pie-patrocinadores">
+    <p class="pie-titulo">Con el patrocinio de</p>
+    <div class="patrocinadores-fila">
+      <a class="patrocinador-tarjeta" href="https://hima.es" target="_blank" rel="noopener noreferrer">
+        <img src="assets/logo-hima.png" alt="HIMA">
+      </a>
+      <a class="patrocinador-tarjeta" href="https://bodegasbaron.es" target="_blank" rel="noopener noreferrer">
+        <img src="assets/logo-baron.png" alt="Bodegas Barón">
+      </a>
+    </div>
+    <div class="patrocinadores-fila patrocinadores-fila--grande">
+      <a class="patrocinador-tarjeta patrocinador-tarjeta--grande" href="https://www.instagram.com/lacocinadelsur_sanlucar/?hl=es" target="_blank" rel="noopener noreferrer">
+        <img src="assets/logo-cocinadelsur.jpg" alt="La Cocina del Sur">
+      </a>
+      <a class="patrocinador-tarjeta patrocinador-tarjeta--grande" href="https://www.instagram.com/opticalajara/" target="_blank" rel="noopener noreferrer">
+        <img src="assets/logo-opticalajara.jpg" alt="Óptica La Jara">
+      </a>
+    </div>
+  </footer>
+
+  <script src="app.js?v=9"></script>
+</body>
+</html>
